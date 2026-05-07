@@ -6,7 +6,7 @@ DB_CONFIG = dict(
     host="127.0.0.1",
     port=3306,
     user="sc_loader",
-    password="Gator888",
+    password="",
     database="soccer_checklist_db",
     charset="utf8mb4",
 )
@@ -29,7 +29,7 @@ SECRET_KEY = "change-me-before-going-live-use-a-long-random-string"
 # Replace with Google OAuth in production — see routers/auth.py for the hook.
 TEST_USERS = {
     "admin@soccerchecklist.com": {
-        "password": "Admin1234!",
+        "password": "",
         "name":     "Admin",
         "role":     "admin",
     },
