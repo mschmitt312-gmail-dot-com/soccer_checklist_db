@@ -1,0 +1,192 @@
+import os
+import time
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+import re
+import json
+
+INDEX_URL = "https://cartophilic-info-exch.blogspot.com/2024/11/index-e.html"
+BASE_FOLDER = "soccer_checklists"
+WAIT_SECONDS = 10
+CHECKLIST_LIMIT = 5
+
+def get_checklist_links(index_url):
+    r = requests.get(index_url)
+    soup = BeautifulSoup(r.text, 'html.parser')
+    links = []
+    for a in soup.find_all('a', href=True):
+        href = a['href']
+        if href.startswith('http') and "cartophilic-info-exch" in href and "/20" in href:
+            links.append(href)
+    return links
+
+def get_meta(soup, meta_name):
+    tag = soup.find("meta", property=meta_name)
+    return tag["content"] if tag and "content" in tag.attrs else None
+
+def scrape_postbody_block(soup):
+    block = soup.find('div', class_='post-body entry-content')
+    return block
+
+def extract_release_date(content_list):
+    range_pat = re.compile(r'(\d{4})[-/](\d{2,4})')
+    year_pat = re.compile(r'\b(\d{4})\b')
+    for txt in content_list:
+        # Look for date range: 2003-04, 2004-05, or 2003/04
+        range_match = range_pat.search(txt)
+        if range_match:
+            start = range_match.group(1)
+            end = range_match.group(2)
+            # Normalize 2-digit end years
+            if len(end) == 2:
+                end_full = start[:2] + end
+            else:
+                end_full = end
+            return {
+                "release_start": start,
+                "release_end": end_full,
+                "release_raw": range_match.group(0)
+            }
+        # Otherwise, look for a 4-digit year
+        year_match = year_pat.search(txt)
+        if year_match:
+            return {
+                "release_start": year_match.group(1),
+                "release_end": None,
+                "release_raw": year_match.group(1)
+            }
+    return {
+        "release_start": None,
+        "release_end": None,
+        "release_raw": None
+    }
+
+def save_text_content(block, folder, url):
+    seen = set()
+    content_list = []
+    if block:
+        for div in block.find_all(['div', 'span', 'b']):
+            txt = div.get_text(strip=True)
+            if txt and txt != u'\xa0' and txt not in seen:
+                content_list.append(txt)
+                seen.add(txt)
+    with open(os.path.join(folder, "content.txt"), "w", encoding="utf-8") as f:
+        f.write(f"The source URL is: {url}\n\n")
+        for line in content_list:
+            f.write(line + '\n')
+    return content_list  # Return for use in extract_release_date
+
+def download_images(block, folder, base_url):
+    imgs = block.find_all('img') if block else []
+    for img in imgs:
+        img_url = img.get('src')
+        if not img_url:
+            continue
+        if not img_url.startswith('http'):
+            from urllib.parse import urljoin
+            img_url = urljoin(base_url, img_url)
+        try:
+            img_data = requests.get(img_url).content
+            filename = img_url.split('/')[-1].split('?')[0]
+            filename = filename.replace('%20', '_')
+            with open(os.path.join(folder, filename), 'wb') as fh:
+                fh.write(img_data)
+        except Exception as e:
+            print(f"Failed to download {img_url}: {e}")
+
+def extract_checklist(block, folder):
+    pattern = re.compile(r'^(\d+)\.\s*(.*)')
+    seen = set()
+    checklist_ordered = []
+    for div in block.find_all(['div', 'span']):
+        txt = div.get_text(strip=True)
+        if txt and pattern.match(txt):
+            cleaned_txt = re.sub(r'^(\d+)\.[^\w]*(.*)', r'\1. \2', txt)
+            cleaned_txt = cleaned_txt.strip()
+            if cleaned_txt not in seen:
+                checklist_ordered.append(cleaned_txt)
+                seen.add(cleaned_txt)
+    if checklist_ordered:
+        def key_func(s):
+            match = re.match(r'^(\d+)\.', s)
+            return int(match.group(1)) if match else float('inf')
+        checklist_sorted = sorted(checklist_ordered, key=key_func)
+        df = pd.DataFrame([[row] for row in checklist_sorted])
+        df.to_csv(os.path.join(folder, "checklist.csv"), index=False, header=False, encoding="utf-8-sig")
+    else:
+        with open(os.path.join(folder, "checklist.csv"), "w", encoding="utf-8") as f:
+            f.write("No checklist rows found.")
+
+def extract_checklist_for_json(block):
+    pattern = re.compile(r'^(\d+)\.\s*(.*)')
+    seen = set()
+    checklist_ordered = []
+    for div in block.find_all(['div', 'span']):
+        txt = div.get_text(strip=True)
+        m = pattern.match(txt)
+        if txt and m:
+            card_number = int(m.group(1))
+            card_text = re.sub(r'^(\d+)\.[^\w]*(.*)', r'\2', txt).strip()
+            key = f"{card_number}_{card_text}"
+            if key not in seen:
+                checklist_ordered.append({"card_number": card_number, "card_text": card_text})
+                seen.add(key)
+    return checklist_ordered
+
+def collect_image_filenames(folder):
+    files = os.listdir(folder)
+    return [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif'))]
+
+def save_json(block, folder, url, checklist_rows, image_filenames, set_name, release_date, content_list):
+    data = {
+        "source_url": url,
+        "set_name": set_name,
+        "release_date": release_date,
+        "content": content_list,
+        "checklist": checklist_rows,
+        "images": image_filenames
+    }
+    with open(os.path.join(folder, "export.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def main():
+    os.makedirs(BASE_FOLDER, exist_ok=True)
+    links = get_checklist_links(INDEX_URL)
+    print(f"Found {len(links)} checklist links.")
+
+    exported_count = 0
+    idx = 0
+    while exported_count < CHECKLIST_LIMIT and idx < len(links):
+        url = links[idx]
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        title_tag = get_meta(soup, "og:title")
+        folder_name = title_tag.strip().replace(' ', '_') if title_tag else f"checklist_{exported_count+1}"
+        folder = os.path.join(BASE_FOLDER, folder_name)
+
+        if os.path.exists(folder):
+            print(f"Skipping existing folder: {folder_name}")
+            idx += 1
+            continue
+
+        os.makedirs(folder, exist_ok=True)
+        block = scrape_postbody_block(soup)
+        if block:
+            content_list = save_text_content(block, folder, url)
+            download_images(block, folder, url)
+            extract_checklist(block, folder)
+            set_name = title_tag.strip() if title_tag else folder_name
+            checklist_rows = extract_checklist_for_json(block)
+            image_filenames = collect_image_filenames(folder)
+            release_date = extract_release_date(content_list)
+            save_json(block, folder, url, checklist_rows, image_filenames, set_name, release_date, content_list)
+        else:
+            print("No checklist block found in:", url)
+        print(f"✔ Finished checklist: {folder_name}")
+        exported_count += 1
+        idx += 1
+        time.sleep(WAIT_SECONDS)
+
+if __name__ == "__main__":
+    main()
