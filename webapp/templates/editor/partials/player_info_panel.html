@@ -1,0 +1,58 @@
+<div id="player-info-panel" class="card shadow-sm border-0 text-center p-4">
+
+  {% if saved %}
+  <div class="alert alert-light border-start border-success border-3 py-2 mb-3 text-start"
+       style="font-family:'Crimson Text',serif; font-size:.9rem;">
+    <i class="bi bi-check-circle-fill text-success me-2"></i>Saved successfully.
+  </div>
+  {% endif %}
+
+  <!-- Photo or placeholder icon -->
+  <div class="mb-3">
+    {% if player.photo_url %}
+      <img src="{{ player.photo_url }}" alt="{{ player.last_name }}"
+           style="width:96px; height:96px; border-radius:50%; object-fit:cover;
+                  object-position:{{ player.photo_position or '50% 50%' }};
+                  border:2px solid var(--grey-light); box-shadow:0 2px 8px rgba(0,0,0,.12);">
+    {% else %}
+      <i class="bi bi-person-circle text-secondary" style="font-size:4rem"></i>
+    {% endif %}
+  </div>
+
+  <h4 class="mb-1">
+    {% if player.first_name %}{{ player.first_name }}<br>{% endif %}
+    <span class="fw-bold">{{ player.last_name or player.name_raw }}</span>
+  </h4>
+  {% if player.nationality %}
+    <div class="text-muted small mb-2">{{ player.nationality }}</div>
+  {% endif %}
+
+  <hr>
+
+  <dl class="text-start mb-0 small">
+    {% if player.birth_year or player.date_of_birth %}
+      <dt class="text-muted">Born</dt>
+      <dd>
+        {% if player.date_of_birth %}{{ player.date_of_birth }}
+        {% else %}c. {{ player.birth_year }}{% endif %}
+        {% if player.birth_place %}
+          <span class="text-muted"> · {{ player.birth_place }}</span>
+        {% endif %}
+      </dd>
+    {% elif player.birth_place %}
+      <dt class="text-muted">Birthplace</dt>
+      <dd>{{ player.birth_place }}</dd>
+    {% endif %}
+  </dl>
+
+  <!-- Edit button (visible to editors only — checked server-side before rendering) -->
+  <div class="mt-3">
+    <button class="btn btn-outline-secondary btn-sm"
+            style="font-family:'Crimson Text',serif; font-size:.88rem;"
+            hx-get="/editor/players/{{ player.player_id }}/edit-panel"
+            hx-target="#player-info-panel"
+            hx-swap="outerHTML">
+      <i class="bi bi-pencil-square me-1"></i>Edit
+    </button>
+  </div>
+</div>

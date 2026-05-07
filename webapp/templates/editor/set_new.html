@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Create New Set — Editor{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/editor">Editor</a></li>
+    <li class="breadcrumb-item active">Create New Set</li>
+  </ol>
+</nav>
+
+<!-- Page header -->
+<div class="mb-4">
+  <h2 class="mb-0" style="font-family:'Playfair Display',serif;">
+    <i class="bi bi-plus-circle me-2" style="color:var(--sepia);"></i>Create New Set
+  </h2>
+  <p class="text-muted mb-0 mt-1" style="font-family:'Crimson Text',serif; font-size:.95rem;">
+    Fill in what you know — all fields are optional except Publisher or Set Name. You can edit everything after saving.
+  </p>
+</div>
+
+<div class="card shadow-sm border-0" style="max-width:720px;">
+  <div class="card-body p-4">
+
+    <form method="POST" action="/editor/sets/new">
+
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label">Publisher</label>
+          <input type="text" class="form-control form-control-sm" name="publisher"
+                 placeholder="e.g. Ogden's" autofocus>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Set Name</label>
+          <input type="text" class="form-control form-control-sm" name="set_name"
+                 placeholder="e.g. Footballers Series A">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Year Start</label>
+          <input type="number" class="form-control form-control-sm" name="year_start"
+                 placeholder="e.g. 1908" min="1800" max="2100">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Year End</label>
+          <input type="number" class="form-control form-control-sm" name="year_end"
+                 placeholder="optional" min="1800" max="2100">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Season (raw)</label>
+          <input type="text" class="form-control form-control-sm" name="season_raw"
+                 placeholder="e.g. 1907/08">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Country</label>
+          <input type="text" class="form-control form-control-sm" name="country"
+                 placeholder="e.g. England"
+                 list="country-options" autocomplete="off">
+          <datalist id="country-options">
+            {% for c in countries %}
+            <option value="{{ c }}">
+            {% endfor %}
+          </datalist>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Category</label>
+          <select class="form-select form-select-sm" name="category">
+            <option value="football" selected>Football</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Total Cards (declared)</label>
+          <input type="number" class="form-control form-control-sm" name="total_cards"
+                 placeholder="e.g. 50" min="1">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Source URL</label>
+          <input type="url" class="form-control form-control-sm" name="source_url"
+                 placeholder="https://…">
+        </div>
+
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-plus-circle me-1"></i>Create Set
+        </button>
+        <a href="/editor" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

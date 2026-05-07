@@ -1,0 +1,49 @@
+<div id="player-link-row-{{ link.link_id }}"
+     {% if saved %}style="animation: plinkFlash .6s ease;"{% endif %}>
+
+  <div class="d-flex align-items-center gap-2 p-3"
+       style="border-bottom: 1px solid var(--grey-light);">
+
+    <!-- Link name -->
+    <div class="flex-grow-1" style="font-family:'Crimson Text',serif; font-size:.97rem;">
+      <i class="bi bi-link-45deg me-1" style="color:var(--sepia);"></i>
+      <strong>{{ link.link_name }}</strong>
+      <span class="text-muted ms-2" style="font-size:.8rem; word-break:break-all;">{{ link.link_url }}</span>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex-shrink-0 d-flex gap-1">
+      <a href="{{ link.link_url }}" target="_blank" rel="noopener"
+         class="btn btn-outline-secondary btn-sm py-0 px-2"
+         title="Visit link">
+        <i class="bi bi-box-arrow-up-right"></i>
+      </a>
+      <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+              title="Edit link"
+              hx-get="/editor/players/{{ link.player_id }}/links/{{ link.link_id }}/edit-row"
+              hx-target="#player-link-row-{{ link.link_id }}"
+              hx-swap="outerHTML">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+              title="Delete link"
+              hx-delete="/editor/players/{{ link.player_id }}/links/{{ link.link_id }}"
+              hx-target="#player-link-row-{{ link.link_id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this link? This cannot be undone.">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+{% if saved %}
+<style>
+  @keyframes plinkFlash {
+    0%   { background: rgba(122,92,56,.18); }
+    100% { background: transparent; }
+  }
+</style>
+{% endif %}

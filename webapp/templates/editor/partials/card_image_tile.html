@@ -1,0 +1,51 @@
+<div id="card-image-tile-{{ img.image_id }}"
+     data-card-image-tile
+     style="position:relative; width:180px; flex-shrink:0;">
+
+  <!-- Thumbnail -->
+  {% if img.display_url %}
+  <img src="{{ img.display_url }}"
+       alt="{{ img.filename }}"
+       style="width:180px; height:140px; object-fit:cover;
+              border:1px solid var(--grey-light); display:block;"
+       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+  {% endif %}
+
+  <!-- Fallback placeholder -->
+  <div style="width:180px; height:140px; background:var(--parchment);
+              border:1px solid var(--grey-light); display:{% if img.display_url %}none{% else %}flex{% endif %};
+              align-items:center; justify-content:center; color:var(--grey-mid);">
+    <i class="bi bi-image" style="font-size:2rem;"></i>
+  </div>
+
+  <!-- Filename label -->
+  <div style="font-size:.72rem; color:var(--grey-mid); margin-top:3px;
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+              font-family:'Crimson Text',serif;"
+       title="{{ img.filename }}">
+    {{ img.filename }}
+  </div>
+
+  <!-- Remove button -->
+  <button class="btn btn-sm py-0 px-1"
+          style="position:absolute; top:4px; right:4px;
+                 background:rgba(37,32,24,.65); color:var(--cream);
+                 border:none; line-height:1.4; font-size:.8rem;"
+          title="Remove from card"
+          hx-delete="/editor/sets/{{ set_id }}/cards/{{ card_id }}/images/{{ img.image_id }}"
+          hx-target="#card-image-tile-{{ img.image_id }}"
+          hx-swap="outerHTML"
+          hx-confirm="Remove this image from the card?">
+    <i class="bi bi-x-lg"></i>
+  </button>
+
+  {% if new %}
+  <style>
+    #card-image-tile-{{ img.image_id }} { animation: cardTileFlash .6s ease; }
+    @keyframes cardTileFlash {
+      0%   { outline: 2px solid var(--sepia); }
+      100% { outline: none; }
+    }
+  </style>
+  {% endif %}
+</div>

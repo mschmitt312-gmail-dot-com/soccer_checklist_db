@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Soccer Card Checklist{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+  <!-- Vintage serif fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap"
+        rel="stylesheet">
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+
+  <style>
+    /* ── Vintage palette ──────────────────────────────────────────── */
+    :root {
+      --ink:          #1a1612;   /* near-black old ink          */
+      --parchment:    #eeead8;   /* aged paper background       */
+      --cream:        #f7f4e8;   /* lighter parchment for cards */
+      --sepia:        #7a5c38;   /* warm brown accent           */
+      --sepia-light:  #a07848;   /* lighter sepia for hovers    */
+      --sepia-pale:   #d4b896;   /* very pale sepia for borders */
+      --grey-mid:     #6b6258;   /* secondary text              */
+      --grey-light:   #c8c0b0;   /* borders                     */
+      --slate:        #252018;   /* navbar / table headers      */
+      --slate-soft:   #3a3020;   /* slightly lighter slate      */
+    }
+
+    /* ── Base typography ──────────────────────────────────────────── */
+    body {
+      background-color: var(--parchment);
+      color: var(--ink);
+      font-family: 'Crimson Text', Georgia, 'Times New Roman', serif;
+      font-size: 1.05rem;
+      line-height: 1.65;
+    }
+    h1, h2, h3, h4, h5, h6, .navbar-brand {
+      font-family: 'Playfair Display', 'Times New Roman', serif;
+      letter-spacing: 0.02em;
+    }
+    a { color: var(--sepia); }
+    a:hover { color: var(--sepia-light); }
+
+    /* ── Navbar ───────────────────────────────────────────────────── */
+    .navbar {
+      background: var(--slate) !important;
+      border-bottom: 3px double var(--sepia-pale);
+    }
+    .navbar-brand {
+      color: var(--cream) !important;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .navbar-brand span { color: var(--sepia-pale); }
+    .nav-link { color: rgba(247,244,232,.75) !important; }
+    .nav-link:hover, .nav-link.active { color: var(--sepia-pale) !important; }
+    .navbar-toggler-icon { filter: invert(1); }
+
+    /* ── Stat cards ───────────────────────────────────────────────── */
+    .stat-card {
+      background: var(--cream);
+      border: 1px solid var(--grey-light) !important;
+      border-radius: 0 !important;
+      box-shadow: 3px 3px 0 var(--grey-light);
+      transition: box-shadow .15s, transform .15s;
+    }
+    .stat-card:hover {
+      box-shadow: 4px 4px 0 var(--sepia) !important;
+      transform: translateY(-2px);
+    }
+    .stat-card .display-5 {
+      font-weight: 700;
+      color: var(--sepia);
+      font-family: 'Playfair Display', serif;
+    }
+
+    /* ── Item cards (sets list) ───────────────────────────────────── */
+    .item-card {
+      background: var(--cream);
+      border: 1px solid var(--grey-light) !important;
+      border-radius: 0 !important;
+      box-shadow: 2px 2px 0 var(--grey-light);
+      transition: box-shadow .15s;
+    }
+    .item-card:hover { box-shadow: 3px 3px 0 var(--sepia) !important; }
+    .item-card .fw-semibold { font-family: 'Playfair Display', serif; font-size: .95rem; }
+    .item-card .year-badge {
+      font-size: .75rem;
+      background: var(--sepia);
+      color: var(--cream);
+      border-radius: 0;
+      padding: 2px 8px;
+      font-family: 'Crimson Text', serif;
+      letter-spacing: .04em;
+    }
+    .item-card .card-count { font-size: .82rem; color: var(--grey-mid); }
+
+    /* ── Tables ───────────────────────────────────────────────────── */
+    .table {
+      border-color: var(--grey-light);
+      font-family: 'Crimson Text', Georgia, serif;
+    }
+    .table thead th {
+      background: var(--slate);
+      color: var(--sepia-pale);
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      border-color: var(--slate-soft);
+    }
+    .table-hover tbody tr:hover { background: rgba(122, 92, 56, 0.06); }
+    .table td, .table th { border-color: var(--grey-light); }
+
+    /* ── Form controls ────────────────────────────────────────────── */
+    .form-control, .form-select {
+      background: var(--cream);
+      border-color: var(--grey-light);
+      border-radius: 0;
+      color: var(--ink);
+      font-family: 'Crimson Text', serif;
+    }
+    .form-control:focus, .form-select:focus {
+      background: var(--cream);
+      border-color: var(--sepia);
+      box-shadow: 0 0 0 2px rgba(122,92,56,.2);
+      color: var(--ink);
+    }
+    .form-label { font-family: 'Playfair Display', serif; font-size: .85rem; }
+    .input-group-text {
+      background: #ddd8c4;
+      border-color: var(--grey-light);
+      border-radius: 0;
+      color: var(--grey-mid);
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn { border-radius: 0; font-family: 'Playfair Display', serif; letter-spacing: .04em; }
+    .btn-success, .btn-primary {
+      background: var(--sepia) !important;
+      border-color: var(--sepia) !important;
+      color: var(--cream) !important;
+    }
+    .btn-success:hover, .btn-primary:hover {
+      background: var(--sepia-light) !important;
+      border-color: var(--sepia-light) !important;
+    }
+    .btn-outline-light {
+      border-color: var(--sepia-pale);
+      color: var(--sepia-pale);
+      border-radius: 0;
+    }
+    .btn-outline-light:hover { background: var(--sepia); border-color: var(--sepia); }
+    .btn-outline-secondary {
+      border-color: var(--grey-light);
+      color: var(--grey-mid);
+      border-radius: 0;
+    }
+    .btn-outline-secondary:hover {
+      background: var(--grey-light);
+      border-color: var(--grey-light);
+      color: var(--ink);
+    }
+
+    /* ── Badges ───────────────────────────────────────────────────── */
+    .badge {
+      border-radius: 0;
+      font-family: 'Crimson Text', serif;
+      font-weight: 400;
+      letter-spacing: .04em;
+    }
+    .badge.bg-secondary { background: var(--grey-mid) !important; }
+    .badge.bg-light { background: #ddd8c4 !important; color: var(--ink) !important; }
+
+    /* ── Cards / panels ───────────────────────────────────────────── */
+    .card {
+      border-color: var(--grey-light);
+      border-radius: 0 !important;
+      background: var(--cream);
+    }
+    .card-header {
+      background: var(--cream) !important;
+      border-bottom-color: var(--grey-light);
+      font-family: 'Playfair Display', serif;
+    }
+    .card-footer {
+      background: var(--cream) !important;
+      border-top-color: var(--grey-light);
+    }
+    .shadow-sm { box-shadow: 2px 2px 0 var(--grey-light) !important; }
+
+    /* ── Pagination ───────────────────────────────────────────────── */
+    .page-link {
+      color: var(--sepia);
+      background: var(--cream);
+      border-color: var(--grey-light);
+      border-radius: 0 !important;
+      font-family: 'Playfair Display', serif;
+    }
+    .page-link:hover { background: #ddd8c4; color: var(--ink); border-color: var(--grey-light); }
+    .page-item.active .page-link {
+      background: var(--slate);
+      border-color: var(--slate);
+      color: var(--sepia-pale);
+    }
+    .page-item.disabled .page-link { background: var(--parchment); border-color: var(--grey-light); }
+
+    /* ── Breadcrumb ───────────────────────────────────────────────── */
+    .breadcrumb {
+      font-family: 'Crimson Text', serif;
+      font-size: .92rem;
+      background: transparent;
+    }
+    .breadcrumb-item a { color: var(--sepia); }
+    .breadcrumb-item.active { color: var(--grey-mid); }
+    .breadcrumb-item + .breadcrumb-item::before { color: var(--grey-light); }
+
+    /* ── Alerts ───────────────────────────────────────────────────── */
+    .alert-light {
+      background: #e8e2cc;
+      border-color: var(--grey-light);
+      color: var(--ink);
+      border-radius: 0;
+    }
+
+    /* ── Decorative section divider ───────────────────────────────── */
+    .vintage-divider {
+      text-align: center;
+      color: var(--sepia-pale);
+      letter-spacing: .3em;
+      font-size: .75rem;
+      margin: 1.5rem 0;
+    }
+    .vintage-divider::before,
+    .vintage-divider::after {
+      content: '';
+      display: inline-block;
+      width: 80px;
+      height: 1px;
+      background: var(--sepia-pale);
+      vertical-align: middle;
+      margin: 0 .75rem;
+    }
+
+    /* ── HTMX loading spinner ─────────────────────────────────────── */
+    .search-spinner { display: none; }
+    .htmx-request .search-spinner { display: inline-block; }
+    .htmx-request.search-spinner { display: inline-block; }
+
+    /* ── Footer ───────────────────────────────────────────────────── */
+    footer {
+      border-top: 3px double var(--sepia-pale);
+      background: var(--cream);
+      font-family: 'Crimson Text', serif;
+      font-size: .9rem;
+      color: var(--grey-mid);
+      letter-spacing: .03em;
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <i class="bi bi-card-checklist me-1"></i>Soccer Card <span>Checklist</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link {% if request.url.path == '/' %}active{% endif %}"
+             href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/sets' in request.url.path %}active{% endif %}"
+             href="/sets">Sets</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/players' in request.url.path %}active{% endif %}"
+             href="/players">Players</a>
+        </li>
+        {% if request.session.get("user") %}
+        <li class="nav-item">
+          <a class="nav-link {% if '/editor' in request.url.path %}active{% endif %}"
+             href="/editor">
+            <i class="bi bi-pencil-square me-1"></i>Editor
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+      {% set _user = request.session.get("user") %}
+      {% if _user %}
+      <div class="d-flex align-items-center gap-2">
+        <span class="small" style="color: rgba(247,244,232,.6); font-family:'Crimson Text',serif;">
+          {{ _user.name }}
+        </span>
+        <a href="/auth/logout" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+        </a>
+      </div>
+      {% else %}
+      <a href="/auth/login" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-person-circle me-1"></i>Sign In
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- Page content -->
+<main class="container py-4">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Footer -->
+<footer class="py-3 mt-4">
+  <div class="container text-center text-muted small">
+    Soccer Card Checklist &mdash; historical card &amp; sticker database
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

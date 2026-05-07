@@ -1,0 +1,136 @@
+<!-- Tab 3: Image Library -->
+<div class="p-3 d-flex align-items-center gap-3 flex-wrap"
+     style="background:var(--cream); border-bottom: 1px solid var(--sepia-pale);">
+  <span class="small" style="font-family:'Crimson Text',serif; color:var(--grey-mid);">
+    {% if no_filter %}
+      Use the filters to search the image library
+    {% else %}
+      <strong style="color:var(--ink);">{{ total }}</strong> image{{ 's' if total != 1 }} total
+    {% endif %}
+  </span>
+
+  <!-- Filters -->
+  <form id="library-filter-form" class="d-flex gap-2 align-items-center ms-auto flex-wrap">
+    <input type="search" name="q" class="form-control form-control-sm" style="max-width:180px;"
+           placeholder="Search sets or cards…"
+           value="{{ q }}"
+           hx-get="/editor/images/library"
+           hx-target="#tab-content"
+           hx-swap="innerHTML"
+           hx-include="#library-filter-form"
+           hx-trigger="keyup changed delay:400ms, search">
+    <input type="hidden" name="set_id" value="{{ set_id }}">
+
+    <select class="form-select form-select-sm" name="set_id" style="max-width:260px;"
+            hx-get="/editor/images/library"
+            hx-target="#tab-content"
+            hx-swap="innerHTML"
+            hx-include="#library-filter-form"
+            hx-trigger="change">
+      <option value="0" {% if not set_id %}selected{% endif %}>All sets</option>
+      {% for s in sets %}
+        <option value="{{ s.set_id }}" {% if s.set_id == set_id %}selected{% endif %}>
+          {% if s.year_start %}{{ s.year_start }} · {% endif %}{{ s.publisher or s.set_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if no_filter %}
+  <div class="p-5 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+    <i class="bi bi-funnel" style="font-size:2rem; color:var(--sepia-pale);"></i>
+    <div class="mt-2">Enter a search term or choose a set above to browse the image library.</div>
+  </div>
+{% elif not images %}
+  <div class="p-5 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+    <i class="bi bi-images" style="font-size:2rem; color:var(--sepia-pale);"></i>
+    <div class="mt-2">No images found{% if q or set_id %} matching your filters{% endif %}.</div>
+  </div>
+{% else %}
+<div class="p-3" style="background:var(--parchment);">
+  <div class="row g-3">
+    {% for img in images %}
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+      <div class="card h-100" style="overflow:hidden; background:var(--cream);
+                                     border: 1px solid var(--sepia-pale) !important;
+                                     box-shadow: 2px 2px 0 var(--grey-light);">
+
+        <!-- Thumbnail -->
+        {% if img.display_url %}
+          <div style="height:120px; overflow:hidden; background:#e8e2d0; cursor:zoom-in;
+                      border-bottom: 1px solid var(--sepia-pale); position:relative;"
+               onclick="lightboxOpenUrl('{{ img.display_url }}')">
+            <img src="{{ img.display_url }}" alt=""
+                 style="width:100%; height:100%; object-fit:cover;"
+                 onerror="this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100\' style=\'font-size:.72rem; color:var(--grey-mid);\'>No preview</div>'">
+            {% if img.card_id %}
+              <span style="position:absolute; top:4px; right:4px; background:rgba(122,92,56,.85);
+                           color:#fff; font-size:.65rem; padding:1px 5px; border-radius:3px;">
+                card
+              </span>
+            {% else %}
+              <span style="position:absolute; top:4px; right:4px; background:rgba(80,70,55,.75);
+                           color:#fff; font-size:.65rem; padding:1px 5px; border-radius:3px;">
+                set
+              </span>
+            {% endif %}
+          </div>
+        {% else %}
+          <div style="height:120px; background:#e8e2d0; display:flex; align-items:center;
+                      justify-content:center; border-bottom: 1px solid var(--sepia-pale);">
+            <i class="bi bi-image" style="font-size:2rem; color:var(--sepia-pale);"></i>
+          </div>
+        {% endif %}
+
+        <!-- Info -->
+        <div class="p-2" style="font-size:.75rem;">
+          <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                      color:var(--grey-mid); margin-bottom:.2rem;"
+               title="{{ img.publisher or img.set_name }}">
+            {% if img.year_start %}{{ img.year_start }} · {% endif %}{{ img.publisher or img.set_name }}
+          </div>
+          {% if img.card_id and img.name_in_set %}
+            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                        color:var(--sepia); font-weight:500;"
+                 title="{{ img.name_in_set }}">
+              {% if img.card_number %}#{{ img.card_number }} · {% endif %}{{ img.name_in_set }}
+            </div>
+            <a href="/editor/sets/{{ img.set_id }}/cards/{{ img.card_id }}/images"
+               class="btn btn-outline-secondary btn-sm w-100 mt-1 py-0"
+               style="font-size:.72rem;" hx-boost="false" target="_self">
+              <i class="bi bi-camera me-1"></i>Card Images
+            </a>
+          {% else %}
+            <div style="font-size:.72rem; font-style:italic; color:var(--grey-mid);">Set-level image</div>
+            <a href="/editor/sets/{{ img.set_id }}/images"
+               class="btn btn-outline-secondary btn-sm w-100 mt-1 py-0"
+               style="font-size:.72rem;" hx-boost="false" target="_self">
+              <i class="bi bi-images me-1"></i>Set Images
+            </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if total_pages > 1 %}
+<div class="d-flex justify-content-center gap-1 p-3 flex-wrap"
+     style="background:var(--cream); border-top: 1px solid var(--sepia-pale);">
+  {% if page > 1 %}
+    <button class="btn btn-sm btn-outline-secondary"
+            hx-get="/editor/images/library?page={{ page - 1 }}&set_id={{ set_id }}&q={{ q }}"
+            hx-target="#tab-content" hx-swap="innerHTML">‹ Prev</button>
+  {% endif %}
+  <span class="btn btn-sm disabled" style="color:var(--grey-mid);">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+    <button class="btn btn-sm btn-outline-secondary"
+            hx-get="/editor/images/library?page={{ page + 1 }}&set_id={{ set_id }}&q={{ q }}"
+            hx-target="#tab-content" hx-swap="innerHTML">Next ›</button>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}

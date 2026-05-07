@@ -1,0 +1,154 @@
+<div class="card shadow-sm border-0"
+     style="border-top: 3px solid var(--sepia) !important;">
+  <div class="card-header py-2"
+       style="background:rgba(122,92,56,.06);">
+    <span style="font-family:'Playfair Display',serif; font-size:.85rem;
+                 text-transform:uppercase; letter-spacing:.05em; color:var(--sepia);">
+      <i class="bi bi-eye me-1"></i>Merge Preview
+    </span>
+  </div>
+  <div class="card-body">
+
+    <!-- Side-by-side summary -->
+    <div class="row g-3 mb-4">
+
+      <!-- Source -->
+      <div class="col-md-5">
+        <div class="p-3 rounded" style="background:rgba(220,53,69,.05); border:1px solid rgba(220,53,69,.2);">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge" style="background:rgba(220,53,69,.15); color:#dc3545; font-weight:normal;">
+              Retired
+            </span>
+            <strong style="font-family:'Playfair Display',serif;">
+              {{ source.first_name or '' }} {{ source.last_name or source.name_raw }}
+            </strong>
+          </div>
+          <dl class="mb-0 small row g-0">
+            <dt class="col-6 text-muted">Cards</dt>
+            <dd class="col-6">{{ source.card_count }}</dd>
+            <dt class="col-6 text-muted">Sets</dt>
+            <dd class="col-6">{{ source.set_count }}</dd>
+            {% if source.nationality %}
+            <dt class="col-6 text-muted">Nationality</dt>
+            <dd class="col-6">{{ source.nationality }}</dd>
+            {% endif %}
+            {% if source.birth_year or source.date_of_birth %}
+            <dt class="col-6 text-muted">Born</dt>
+            <dd class="col-6">
+              {% if source.date_of_birth %}{{ source.date_of_birth }}
+              {% else %}c. {{ source.birth_year }}{% endif %}
+            </dd>
+            {% endif %}
+            {% if source.birth_place %}
+            <dt class="col-6 text-muted">Birthplace</dt>
+            <dd class="col-6">{{ source.birth_place }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="col-md-2 d-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-right" style="font-size:1.8rem; color:var(--sepia);"></i>
+      </div>
+
+      <!-- Target -->
+      <div class="col-md-5">
+        <div class="p-3 rounded" style="background:rgba(122,92,56,.06); border:1px solid rgba(122,92,56,.2);">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge" style="background:rgba(122,92,56,.15); color:var(--sepia); font-weight:normal;">
+              Survives
+            </span>
+            <strong style="font-family:'Playfair Display',serif;">
+              {{ target.first_name or '' }} {{ target.last_name or target.name_raw }}
+            </strong>
+          </div>
+          <dl class="mb-0 small row g-0">
+            <dt class="col-6 text-muted">Cards (after)</dt>
+            <dd class="col-6">{{ target.card_count + source.card_count }}</dd>
+            <dt class="col-6 text-muted">Sets (after)</dt>
+            <dd class="col-6">{{ target.set_count + source.set_count - shared_sets }}</dd>
+            {% if target.nationality %}
+            <dt class="col-6 text-muted">Nationality</dt>
+            <dd class="col-6">{{ target.nationality }}</dd>
+            {% endif %}
+            {% if target.birth_year or target.date_of_birth %}
+            <dt class="col-6 text-muted">Born</dt>
+            <dd class="col-6">
+              {% if target.date_of_birth %}{{ target.date_of_birth }}
+              {% else %}c. {{ target.birth_year }}{% endif %}
+            </dd>
+            {% endif %}
+            {% if target.birth_place %}
+            <dt class="col-6 text-muted">Birthplace</dt>
+            <dd class="col-6">{{ target.birth_place }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warnings -->
+    {% if shared_sets > 0 %}
+    <div class="alert alert-warning py-2 mb-3" style="font-family:'Crimson Text',serif;">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      These players share <strong>{{ shared_sets }} set{{ 's' if shared_sets != 1 }}</strong>.
+      Having two cards for the same player in one set is unusual — double-check this is a genuine duplicate before merging.
+    </div>
+    {% endif %}
+
+    <!-- What will happen -->
+    <div class="alert alert-light border py-2 mb-3" style="font-family:'Crimson Text',serif; font-size:.9rem;">
+      <i class="bi bi-info-circle me-2 text-secondary"></i>
+      <strong>{{ source.card_count }} card{{ 's' if source.card_count != 1 }}</strong>
+      will be reassigned to
+      <strong>{{ target.first_name or '' }} {{ target.last_name or target.name_raw }}</strong>.
+      {% if not target.nationality and source.nationality %}
+        Nationality (<em>{{ source.nationality }}</em>) will be copied to the surviving record.
+      {% endif %}
+      {% if not target.date_of_birth and (source.date_of_birth or source.birth_year) %}
+        Birth date will be copied to the surviving record.
+      {% endif %}
+      {% if not target.birth_place and source.birth_place %}
+        Birthplace (<em>{{ source.birth_place }}</em>) will be copied to the surviving record.
+      {% endif %}
+      The source player will become a hidden alias.
+    </div>
+
+    <!-- Confirm button -->
+    <div class="d-flex gap-2">
+      <button type="button"
+              class="btn btn-danger"
+              id="confirm-merge-btn"
+              onclick="confirmMerge({{ source.player_id }}, {{ target.player_id }})">
+        <i class="bi bi-arrow-left-right me-1"></i>Confirm Merge
+      </button>
+      <button type="button" class="btn btn-outline-secondary"
+              onclick="clearMergeTarget()">
+        Cancel
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function confirmMerge(sourceId, targetId) {
+  var btn = document.getElementById('confirm-merge-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Merging…';
+
+  fetch('/editor/players/' + sourceId + '/merge/' + targetId, { method: 'POST' })
+    .then(function (res) {
+      var redirect = res.headers.get('HX-Redirect');
+      if (redirect) {
+        window.location.href = redirect;
+      }
+    })
+    .catch(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-left-right me-1"></i>Confirm Merge';
+      alert('An error occurred. Please try again.');
+    });
+}
+</script>

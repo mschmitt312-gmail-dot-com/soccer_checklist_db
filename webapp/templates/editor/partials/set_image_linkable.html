@@ -1,0 +1,39 @@
+<div style="position:relative; width:180px; flex-shrink:0;">
+
+  <!-- Thumbnail -->
+  {% if img.display_url %}
+  <img src="{{ img.display_url }}"
+       alt="{{ img.filename }}"
+       style="width:180px; height:140px; object-fit:cover;
+              border:1px solid var(--grey-light); display:block;"
+       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+  {% endif %}
+
+  <!-- Fallback placeholder -->
+  <div style="width:180px; height:140px; background:var(--parchment);
+              border:1px solid var(--grey-light); display:{% if img.display_url %}none{% else %}flex{% endif %};
+              align-items:center; justify-content:center; color:var(--grey-mid);">
+    <i class="bi bi-image" style="font-size:2rem;"></i>
+  </div>
+
+  <!-- Filename label -->
+  <div style="font-size:.72rem; color:var(--grey-mid); margin-top:3px;
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+              font-family:'Crimson Text',serif;"
+       title="{{ img.filename }}">
+    {{ img.filename }}
+  </div>
+
+  <!-- Link button — result lands in #link-result; JS moves tile to card grid -->
+  <button class="btn btn-sm py-0 px-1"
+          style="position:absolute; top:4px; right:4px;
+                 background:rgba(37,32,24,.65); color:var(--cream);
+                 border:none; line-height:1.4; font-size:.8rem;"
+          title="Link to this card"
+          hx-post="/editor/sets/{{ set_id }}/cards/{{ card_id }}/images/link/{{ img.image_id }}"
+          hx-target="#link-result"
+          hx-swap="innerHTML">
+    <i class="bi bi-link-45deg"></i>
+  </button>
+
+</div>

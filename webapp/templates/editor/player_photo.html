@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}Player Photo — {{ player.first_name or '' }} {{ player.last_name or player.name_raw }}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/editor">Editor</a></li>
+    <li class="breadcrumb-item"><a href="/players/{{ player.player_id }}">{{ player.first_name or '' }} {{ player.last_name or player.name_raw }}</a></li>
+    <li class="breadcrumb-item active">Photo</li>
+  </ol>
+</nav>
+
+<!-- Header -->
+<div class="d-flex align-items-start justify-content-between mb-4">
+  <div>
+    <h2 class="mb-0" style="font-family:'Playfair Display',serif;">
+      <i class="bi bi-person-badge me-2" style="color:var(--sepia);"></i>Player Photo
+    </h2>
+    <p class="text-muted mb-0 mt-1" style="font-family:'Crimson Text',serif; font-size:.95rem;">
+      {{ player.first_name or '' }} {{ player.last_name or player.name_raw }}
+    </p>
+  </div>
+  <a href="/players/{{ player.player_id }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Player
+  </a>
+</div>
+
+<div class="row g-4">
+
+  {% if player.photo_url %}
+
+  <!-- Crop tool -->
+  <div class="col-md-5">
+    <div class="card shadow-sm border-0">
+      <div class="card-header py-2">
+        <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em;
+                     text-transform:uppercase; color:var(--grey-mid);">
+          <i class="bi bi-crop me-1"></i>Position Photo
+        </span>
+      </div>
+      <div class="card-body p-4 text-center">
+
+        <p class="text-muted small mb-3" style="font-family:'Crimson Text',serif;">
+          Drag the photo to centre the face inside the circle.
+        </p>
+
+        <!-- Circular crop viewport -->
+        <div id="crop-container"
+             style="width:200px; height:200px; border-radius:50%; overflow:hidden;
+                    cursor:grab; margin:0 auto;
+                    border:3px solid var(--sepia);
+                    box-shadow:0 2px 12px rgba(0,0,0,.18);
+                    position:relative; user-select:none; touch-action:none;">
+          <img id="crop-img"
+               src="{{ player.photo_url }}"
+               style="width:200px; height:200px; object-fit:cover;
+                      object-position:{{ pos_x }}% {{ pos_y }}%;
+                      pointer-events:none; display:block;">
+        </div>
+
+        <!-- Live preview at actual display size -->
+        <div class="mt-3 d-flex align-items-center justify-content-center gap-3">
+          <div>
+            <div class="text-muted" style="font-size:.7rem; margin-bottom:4px;">Preview (actual size)</div>
+            <img id="preview-sm"
+                 src="{{ player.photo_url }}"
+                 style="width:64px; height:64px; border-radius:50%; object-fit:cover;
+                        object-position:{{ pos_x }}% {{ pos_y }}%;
+                        border:2px solid var(--grey-light);">
+          </div>
+          <div>
+            <div class="text-muted" style="font-size:.7rem; margin-bottom:4px;">Player page size</div>
+            <img id="preview-md"
+                 src="{{ player.photo_url }}"
+                 style="width:96px; height:96px; border-radius:50%; object-fit:cover;
+                        object-position:{{ pos_x }}% {{ pos_y }}%;
+                        border:2px solid var(--grey-light); box-shadow:0 2px 8px rgba(0,0,0,.12);">
+          </div>
+        </div>
+
+        <!-- Save position -->
+        <form id="position-form"
+              class="mt-4"
+              hx-post="/editor/players/{{ player.player_id }}/photo/position"
+              hx-target="#position-result"
+              hx-swap="innerHTML">
+          <input type="hidden" id="input-pos-x" name="pos_x" value="{{ pos_x }}">
+          <input type="hidden" id="input-pos-y" name="pos_y" value="{{ pos_y }}">
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-floppy me-1"></i>Save Position
+          </button>
+        </form>
+        <div id="position-result" class="mt-2"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload / Remove -->
+  <div class="col-md-7">
+
+  {% else %}
+
+  <!-- No photo yet — full width upload -->
+  <div class="col-12">
+
+  {% endif %}
+
+    <div class="row g-4">
+
+      <!-- Upload new photo -->
+      <div class="col-12">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-2">
+            <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em;
+                         text-transform:uppercase; color:var(--grey-mid);">
+              <i class="bi bi-cloud-arrow-up me-1"></i>{{ "Replace" if player.photo_url else "Upload" }} Photo
+            </span>
+          </div>
+          <div class="card-body p-3">
+            <form id="photo-upload-form"
+                  hx-post="/editor/players/{{ player.player_id }}/photo/upload"
+                  hx-encoding="multipart/form-data"
+                  hx-target="#upload-result"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="
+                    if(event.detail.successful){
+                      var loc = event.detail.xhr.getResponseHeader('HX-Redirect');
+                      if(loc){ window.location.href = loc; }
+                    }">
+              <div class="mb-3">
+                <label class="form-label">Select image file</label>
+                <input type="file" class="form-control form-control-sm" name="file"
+                       accept=".jpg,.jpeg,.png,.gif,.webp" required>
+                <div class="form-text">JPG, PNG, GIF, or WebP.</div>
+              </div>
+              <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-upload me-1"></i>Upload
+              </button>
+            </form>
+            <div id="upload-result" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      {% if player.photo_url %}
+      <!-- Remove photo -->
+      <div class="col-12">
+        <div class="card shadow-sm border-0">
+          <div class="card-header py-2">
+            <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em;
+                         text-transform:uppercase; color:var(--grey-mid);">
+              <i class="bi bi-trash me-1"></i>Remove Photo
+            </span>
+          </div>
+          <div class="card-body p-3">
+            <p class="text-muted small mb-2" style="font-family:'Crimson Text',serif;">
+              Removes the photo from this player's profile.
+            </p>
+            <form hx-post="/editor/players/{{ player.player_id }}/photo/remove"
+                  hx-on::after-request="if(event.detail.successful){ var loc=event.detail.xhr.getResponseHeader('HX-Redirect'); if(loc) window.location.href=loc; }">
+              <button type="submit" class="btn btn-outline-danger btn-sm"
+                      onclick="return confirm('Remove this photo?')">
+                <i class="bi bi-trash me-1"></i>Remove Photo
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div><!-- /inner row -->
+  </div><!-- /col -->
+
+</div><!-- /row -->
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if player.photo_url %}
+<script>
+(function () {
+  const container = document.getElementById('crop-container');
+  const img       = document.getElementById('crop-img');
+  const previewSm = document.getElementById('preview-sm');
+  const previewMd = document.getElementById('preview-md');
+  const inputX    = document.getElementById('input-pos-x');
+  const inputY    = document.getElementById('input-pos-y');
+
+  let posX = {{ pos_x }};
+  let posY = {{ pos_y }};
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  function applyPosition() {
+    const pos = posX + '% ' + posY + '%';
+    img.style.objectPosition       = pos;
+    previewSm.style.objectPosition = pos;
+    previewMd.style.objectPosition = pos;
+    inputX.value = Math.round(posX);
+    inputY.value = Math.round(posY);
+  }
+
+  function moveDelta(dx, dy) {
+    const cW = container.offsetWidth;
+    const cH = container.offsetHeight;
+    const nW  = img.naturalWidth  || cW;
+    const nH  = img.naturalHeight || cH;
+
+    // Scale factor for object-fit:cover
+    const scale = Math.max(cW / nW, cH / nH);
+    const rangeX = (nW * scale) - cW;
+    const rangeY = (nH * scale) - cH;
+
+    // Dragging right should move the crop window right (increase X)
+    // so we subtract dx (drag right → lower left margin → higher %)
+    if (rangeX > 0.5) posX = Math.min(100, Math.max(0, posX - (dx / rangeX * 100)));
+    if (rangeY > 0.5) posY = Math.min(100, Math.max(0, posY - (dy / rangeY * 100)));
+
+    applyPosition();
+  }
+
+  // Mouse
+  container.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    container.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    moveDelta(e.clientX - lastX, e.clientY - lastY);
+    lastX = e.clientX;
+    lastY = e.clientY;
+  });
+  document.addEventListener('mouseup', () => {
+    dragging = false;
+    container.style.cursor = 'grab';
+  });
+
+  // Touch
+  container.addEventListener('touchstart', (e) => {
+    dragging = true;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    moveDelta(e.touches[0].clientX - lastX, e.touches[0].clientY - lastY);
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchend', () => { dragging = false; });
+
+  // Initialise
+  applyPosition();
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Editor Dashboard — Soccer Card Checklist{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 class="mb-0" style="font-family:'Playfair Display',serif;">
+      <i class="bi bi-pencil-square me-2" style="color:var(--sepia);"></i>Editor Dashboard
+    </h2>
+    <p class="text-muted mb-0 mt-1" style="font-family:'Crimson Text',serif; font-size:.95rem;">
+      Signed in as <strong>{{ user.name }}</strong>
+      <span class="text-muted">({{ user.email }})</span>
+    </p>
+  </div>
+  <a href="/auth/logout" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+  </a>
+</div>
+
+<div class="vintage-divider mb-4">✦ ✦ ✦</div>
+
+<!-- Editor tools -->
+<h5 class="mb-3" style="font-family:'Playfair Display',serif; letter-spacing:.04em; color:var(--grey-mid); font-size:.85rem; text-transform:uppercase;">
+  Editor Tools
+</h5>
+<div class="row g-3">
+
+  <div class="col-md-4">
+    <div class="card h-100 p-3" style="border-left: 4px solid var(--sepia) !important;">
+      <h6 style="font-family:'Playfair Display',serif;">
+        <i class="bi bi-collection me-2" style="color:var(--sepia);"></i>Sets
+      </h6>
+      <p class="small text-muted mb-3" style="font-family:'Crimson Text',serif;">
+        Edit set metadata, add missing cards, fix publisher and country fields.
+      </p>
+      <div class="mt-auto d-flex gap-2 flex-wrap">
+        <a href="/sets" class="btn btn-outline-secondary btn-sm">Browse Sets to Edit</a>
+        <a href="/editor/sets/new" class="btn btn-outline-secondary btn-sm">Create Set</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 p-3" style="border-left: 4px solid var(--sepia) !important;">
+      <h6 style="font-family:'Playfair Display',serif;">
+        <i class="bi bi-people me-2" style="color:var(--sepia);"></i>Players
+      </h6>
+      <p class="small text-muted mb-3" style="font-family:'Crimson Text',serif;">
+        Merge duplicate players, fix names, add first names to last-name-only records.
+      </p>
+      <div class="mt-auto d-flex gap-2 flex-wrap">
+        <a href="/players" class="btn btn-outline-secondary btn-sm">Browse Players to Edit</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 p-3" style="border-left: 4px solid var(--sepia) !important;">
+      <h6 style="font-family:'Playfair Display',serif;">
+        <i class="bi bi-card-image me-2" style="color:var(--sepia);"></i>Images
+      </h6>
+      <p class="small text-muted mb-3" style="font-family:'Crimson Text',serif;">
+        Link card-level images, review unlinked images, manage the image library.
+      </p>
+      <div class="mt-auto d-flex gap-2 flex-wrap">
+        <a href="/editor/images" class="btn btn-outline-secondary btn-sm">Manage Images</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="vintage-divider mt-4 mb-4">✦ ✦ ✦</div>
+
+<!-- Change Log -->
+<div class="mb-2">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0" style="font-family:'Playfair Display',serif; letter-spacing:.04em; color:var(--grey-mid); font-size:.85rem; text-transform:uppercase;">
+      <i class="bi bi-clock-history me-2" style="color:var(--sepia);"></i>Change Log
+    </h5>
+  </div>
+
+  <!-- Search filters -->
+  <form id="changelog-form" class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+    <input type="search" name="q_player" class="form-control form-control-sm" style="max-width:180px;"
+           placeholder="Filter by player…"
+           hx-get="/editor/changelog"
+           hx-target="#changelog-content"
+           hx-swap="innerHTML"
+           hx-include="#changelog-form"
+           hx-trigger="keyup changed delay:400ms, search">
+    <input type="search" name="q_set" class="form-control form-control-sm" style="max-width:180px;"
+           placeholder="Filter by set…"
+           hx-get="/editor/changelog"
+           hx-target="#changelog-content"
+           hx-swap="innerHTML"
+           hx-include="#changelog-form"
+           hx-trigger="keyup changed delay:400ms, search">
+    <select name="limit" class="form-select form-select-sm" style="max-width:120px;"
+            hx-get="/editor/changelog"
+            hx-target="#changelog-content"
+            hx-swap="innerHTML"
+            hx-include="#changelog-form"
+            hx-trigger="change">
+      <option value="10" selected>Last 10</option>
+      <option value="25">Last 25</option>
+      <option value="50">Last 50</option>
+    </select>
+  </form>
+
+  <div class="card shadow-sm" style="border: 1px solid var(--sepia-pale);">
+    <div id="changelog-content" class="p-0"
+         hx-get="/editor/changelog"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="p-4 text-center text-muted">
+        <span class="spinner-border spinner-border-sm me-2"></span>Loading…
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

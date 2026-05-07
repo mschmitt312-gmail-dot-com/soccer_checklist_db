@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Merge Player — {{ source.first_name or '' }} {{ source.last_name or source.name_raw }}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/editor">Editor</a></li>
+    <li class="breadcrumb-item"><a href="/players/{{ source.player_id }}">{{ source.first_name or '' }} {{ source.last_name or source.name_raw }}</a></li>
+    <li class="breadcrumb-item active">Merge</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <h2 class="mb-0" style="font-family:'Playfair Display',serif;">
+    <i class="bi bi-arrow-left-right me-2" style="color:var(--sepia);"></i>Merge Player
+  </h2>
+  <p class="text-muted mt-1 mb-0" style="font-family:'Crimson Text',serif; font-size:.95rem;">
+    All cards belonging to the source player will be reassigned to the surviving player.
+    The source becomes a retired alias and disappears from all lists and searches.
+  </p>
+</div>
+
+<div class="row g-4">
+
+  <!-- Source player -->
+  <div class="col-md-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header py-2"
+           style="background:rgba(220,53,69,.06); border-bottom:2px solid rgba(220,53,69,.25);">
+        <span style="font-family:'Playfair Display',serif; font-size:.85rem;
+                     text-transform:uppercase; letter-spacing:.05em; color:#dc3545;">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Source — will be retired
+        </span>
+      </div>
+      <div class="card-body">
+        <h5 class="mb-1" style="font-family:'Playfair Display',serif;">
+          {{ source.first_name or '' }} {{ source.last_name or source.name_raw }}
+        </h5>
+        {% if source.nationality %}
+          <div class="text-muted small mb-1">{{ source.nationality }}</div>
+        {% endif %}
+        {% if source.birth_year or source.date_of_birth %}
+          <div class="text-muted small mb-1">
+            b. {% if source.date_of_birth %}{{ source.date_of_birth }}{% else %}c. {{ source.birth_year }}{% endif %}
+            {% if source.birth_place %} · {{ source.birth_place }}{% endif %}
+          </div>
+        {% endif %}
+        <a href="/players/{{ source.player_id }}" target="_blank"
+           class="small" style="color:var(--grey-mid);">
+          View player <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="col-md-2 d-flex align-items-center justify-content-center">
+    <div class="text-center text-muted">
+      <i class="bi bi-arrow-right" style="font-size:2rem; color:var(--sepia);"></i>
+      <div class="small mt-1" style="font-family:'Crimson Text',serif;">merges into</div>
+    </div>
+  </div>
+
+  <!-- Target search -->
+  <div class="col-md-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header py-2"
+           style="background:rgba(122,92,56,.06); border-bottom:2px solid rgba(122,92,56,.25);">
+        <span style="font-family:'Playfair Display',serif; font-size:.85rem;
+                     text-transform:uppercase; letter-spacing:.05em; color:var(--sepia);">
+          <i class="bi bi-person-check me-1"></i>Target — will survive
+        </span>
+      </div>
+      <div class="card-body">
+        <!-- Selected target display -->
+        <div id="target-selected" style="display:none;" class="mb-3">
+          <h5 class="mb-1" style="font-family:'Playfair Display',serif;"
+              id="target-name-display"></h5>
+          <a href="#" id="target-profile-link" target="_blank"
+             class="small" style="color:var(--grey-mid);">
+            View player <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;"></i>
+          </a>
+          <div class="mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="clearMergeTarget()">
+              <i class="bi bi-x me-1"></i>Change
+            </button>
+          </div>
+        </div>
+
+        <!-- Search input -->
+        <div id="target-search-wrap">
+          <label class="form-label small text-muted mb-1">Search for the surviving player</label>
+          <div style="position:relative;">
+            <input type="text"
+                   id="merge-search-input"
+                   class="form-control form-control-sm"
+                   placeholder="Type a name…"
+                   autocomplete="off"
+                   hx-get="/editor/players/merge-search?exclude_id={{ source.player_id }}"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#merge-search-results"
+                   name="q">
+            <div id="merge-search-results"
+                 style="display:none; position:absolute; z-index:200; left:0; right:0;
+                        background:var(--cream); border:1px solid var(--grey-light);
+                        border-radius:4px; max-height:220px; overflow-y:auto;
+                        box-shadow:0 4px 12px rgba(0,0,0,.15);">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Preview section (loaded via HTMX when a target is selected) -->
+<div id="merge-preview" class="mt-4"></div>
+
+<!-- Result items styling -->
+<style>
+.player-result-item {
+  padding: 5px 10px;
+  font-size: .88rem;
+  font-family: 'Crimson Text', serif;
+  cursor: pointer;
+  border-bottom: 1px solid var(--grey-light);
+}
+.player-result-item:last-child { border-bottom: none; }
+.player-result-item:hover { background: rgba(122,92,56,.1); color: var(--sepia); }
+</style>
+
+<script>
+var selectedTargetId = null;
+
+// Show results after HTMX swap
+document.body.addEventListener('htmx:afterSwap', function (e) {
+  if (e.target.id === 'merge-search-results') {
+    e.target.style.display = e.target.innerHTML.trim() ? 'block' : 'none';
+  }
+});
+
+// Hide when cleared
+document.getElementById('merge-search-input').addEventListener('input', function () {
+  if (!this.value.trim()) {
+    var r = document.getElementById('merge-search-results');
+    r.style.display = 'none';
+    r.innerHTML = '';
+  }
+});
+
+// Click outside closes dropdown
+document.addEventListener('click', function (e) {
+  var r = document.getElementById('merge-search-results');
+  if (r && !r.contains(e.target) && e.target.id !== 'merge-search-input') {
+    r.style.display = 'none';
+  }
+});
+
+function selectMergeTarget(targetId, targetName, sourceId) {
+  selectedTargetId = targetId;
+
+  // Update target card display
+  document.getElementById('target-name-display').textContent = targetName;
+  document.getElementById('target-profile-link').href = '/players/' + targetId;
+  document.getElementById('target-selected').style.display = '';
+  document.getElementById('target-search-wrap').style.display = 'none';
+
+  // Hide search results
+  var r = document.getElementById('merge-search-results');
+  r.style.display = 'none';
+  r.innerHTML = '';
+
+  // Load preview via HTMX
+  htmx.ajax('GET',
+    '/editor/players/' + sourceId + '/merge-preview/' + targetId,
+    { target: '#merge-preview', swap: 'innerHTML' }
+  );
+}
+
+function clearMergeTarget() {
+  selectedTargetId = null;
+  document.getElementById('target-selected').style.display = 'none';
+  document.getElementById('target-search-wrap').style.display = '';
+  document.getElementById('merge-search-input').value = '';
+  document.getElementById('merge-preview').innerHTML = '';
+}
+</script>
+
+{% endblock %}

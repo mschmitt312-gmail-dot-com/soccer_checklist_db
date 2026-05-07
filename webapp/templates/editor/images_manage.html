@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Manage Images — Editor{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/editor">Editor</a></li>
+    <li class="breadcrumb-item active">Manage Images</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <h2 class="mb-0" style="font-family:'Playfair Display',serif;">
+    <i class="bi bi-card-image me-2" style="color:var(--sepia);"></i>Manage Images
+  </h2>
+</div>
+
+<!-- Lightbox (shared across all tabs) -->
+<div id="lightbox"
+     onclick="lightboxClose()"
+     style="display:none; position:fixed; inset:0; z-index:1000;
+            background:rgba(20,16,10,.92); align-items:center; justify-content:center;">
+  <img id="lightbox-img" src="" alt=""
+       style="max-height:90vh; max-width:90vw; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.6);"
+       onclick="event.stopPropagation()">
+  <span style="position:absolute; top:16px; right:20px; color:rgba(247,244,232,.55);
+               font-size:.85rem; pointer-events:none;">ESC or click outside to close</span>
+</div>
+<script>
+function lightboxOpenUrl(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function lightboxClose() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') lightboxClose(); });
+</script>
+
+<!-- Tab color definitions -->
+<style>
+  /* Tab 1 — Grey: cards missing images */
+  #img-tabs .tab-missing {
+    border-color: #aaaaaa #aaaaaa transparent;
+    background: #e8e8e8;
+    color: #000 !important;
+  }
+  #img-tabs .tab-missing:hover { background: #dedede; color: #000 !important; }
+  #img-tabs .tab-missing.active {
+    background: #f5f5f5;
+    border-color: #999999 #999999 #f5f5f5;
+    color: #000 !important;
+    font-weight: 600;
+  }
+
+  /* Tab 2 — Sepia/amber: unlinked set images */
+  #img-tabs .tab-unlinked {
+    border-color: #c9b080 #c9b080 transparent;
+    background: #f7f0e0;
+    color: #000 !important;
+  }
+  #img-tabs .tab-unlinked:hover { background: #f0e6cc; color: #111; }
+  #img-tabs .tab-unlinked.active {
+    background: #fdf8ee;
+    border-color: #b89050 #b89050 #fdf8ee;
+    color: #000 !important;
+    font-weight: 600;
+  }
+
+  /* Tab 3 — Off-white: image library */
+  #img-tabs .tab-library {
+    border-color: #cccccc #cccccc transparent;
+    background: #f5f3ee;
+    color: #000 !important;
+  }
+  #img-tabs .tab-library:hover { background: #edeae3; color: #000 !important; }
+  #img-tabs .tab-library.active {
+    background: #faf9f6;
+    border-color: #bbbbbb #bbbbbb #faf9f6;
+    color: #000 !important;
+    font-weight: 600;
+  }
+
+  /* Active tab bottom border blends with content card */
+  #img-tabs .nav-link { font-family:'Crimson Text',serif; font-size:1rem; border-radius: 6px 6px 0 0; }
+</style>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-0" id="img-tabs" style="border-bottom: none; gap: 3px;">
+  <li class="nav-item">
+    <button class="nav-link tab-missing active"
+            onclick="loadTab('missing-cards', this)">
+      <i class="bi bi-exclamation-circle me-1"></i>Cards Missing Images
+      <span class="badge ms-1" style="background:rgba(100,100,100,.18); color:#333;">
+        {{ missing_count }}
+      </span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link tab-unlinked"
+            onclick="loadTab('unlinked', this)">
+      <i class="bi bi-link-45deg me-1"></i>Set Images (not linked to cards)
+      <span class="badge ms-1" style="background:rgba(160,120,40,.18); color:#6b4a1a;">
+        {{ unlinked_count }}
+      </span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link tab-library"
+            onclick="loadTab('library', this)">
+      <i class="bi bi-images me-1"></i>Image Library
+      <span class="badge ms-1" style="background:rgba(100,100,100,.15); color:#444;">
+        {{ library_count }}
+      </span>
+    </button>
+  </li>
+</ul>
+
+<div class="card shadow-sm" id="tab-card"
+     style="border-top-left-radius:0; border: 1px solid #aaaaaa !important;">
+  <div id="tab-content" class="p-0">
+    <!-- Content loads when a tab is clicked -->
+  </div>
+</div>
+
+<script>
+var activeTab = null;
+var tabBorderColors = {
+  'missing-cards': '#aaaaaa',
+  'unlinked':      '#c9b080',
+  'library':       '#cccccc'
+};
+
+function loadTab(tab, btn) {
+  if (activeTab === tab) return;
+  activeTab = tab;
+
+  // Update tab styles
+  document.querySelectorAll('#img-tabs .nav-link').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+
+  // Match the card border to the active tab color
+  document.getElementById('tab-card').style.borderColor = (tabBorderColors[tab] || '#c9b08a') + ' !important';
+  document.getElementById('tab-card').style.setProperty('border-color', tabBorderColors[tab] || '#c9b08a', 'important');
+
+  // Load content
+  htmx.ajax('GET', '/editor/images/' + tab, {
+    target: '#tab-content',
+    swap: 'innerHTML'
+  });
+}
+</script>
+
+{% endblock %}

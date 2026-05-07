@@ -1,0 +1,67 @@
+<div id="note-row-{{ note.note_id }}">
+  <form id="note-edit-{{ note.note_id }}"
+        hx-post="/editor/sets/{{ set_id }}/notes/{{ note.note_id }}"
+        hx-target="#note-row-{{ note.note_id }}"
+        hx-swap="outerHTML">
+
+    <div class="p-3" style="border-bottom: 1px solid var(--grey-light); background: rgba(122,92,56,.04);">
+
+      <!-- Note text -->
+      <div class="mb-3">
+        <label class="form-label form-label-sm text-muted"
+               style="font-family:'Playfair Display',serif; font-size:.75rem;
+                      letter-spacing:.05em; text-transform:uppercase;">Note Text</label>
+        <textarea name="note_text" rows="4"
+                  class="form-control form-control-sm"
+                  style="font-family:'Crimson Text',serif; font-size:.95rem; resize:vertical;"
+                  required>{{ note.note_text }}</textarea>
+      </div>
+
+      <!-- Source URL -->
+      <div class="mb-3">
+        <label class="form-label form-label-sm text-muted"
+               style="font-family:'Playfair Display',serif; font-size:.75rem;
+                      letter-spacing:.05em; text-transform:uppercase;">Source URL</label>
+        <input type="url" name="source_url"
+               class="form-control form-control-sm"
+               style="font-family:'Crimson Text',serif; font-size:.9rem;"
+               placeholder="https://… (leave blank to clear)"
+               value="{{ note.source_url or '' }}">
+        <div class="form-text" style="font-family:'Crimson Text',serif; font-size:.8rem;">
+          Each note has its own source URL. Leave blank to show no source link for this note.
+        </div>
+      </div>
+
+      <!-- Source attribution toggle -->
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 id="scraped-{{ note.note_id }}"
+                 name="note_source" value="scraped"
+                 {% if note.note_source == 'scraped' %}checked{% endif %}
+                 onchange="this.form.querySelector('input[name=note_source][type=hidden]').disabled = this.checked;">
+          <label class="form-check-label small" for="scraped-{{ note.note_id }}"
+                 style="font-family:'Crimson Text',serif;">
+            Show source link on public page (links to Source URL above)
+          </label>
+          <input type="hidden" name="note_source" value="manual"
+                 {% if note.note_source == 'scraped' %}disabled{% endif %}>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success btn-sm py-0 px-2">
+          <i class="bi bi-floppy me-1"></i>Save
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                hx-get="/editor/sets/{{ set_id }}/notes/{{ note.note_id }}/view-row"
+                hx-target="#note-row-{{ note.note_id }}"
+                hx-swap="outerHTML">
+          <i class="bi bi-x-lg"></i> Cancel
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>

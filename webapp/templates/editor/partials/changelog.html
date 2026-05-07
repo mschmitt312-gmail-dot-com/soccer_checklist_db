@@ -1,0 +1,115 @@
+{% if not rows %}
+  <div class="text-center py-4" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+    <i class="bi bi-clock-history" style="font-size:1.5rem;"></i>
+    <div class="mt-1">No changes recorded yet{% if q_player or q_set %} matching your filters{% endif %}.</div>
+  </div>
+{% else %}
+<div class="table-responsive">
+  <table class="table table-hover table-sm table-bordered mb-0" style="font-size:.85rem;">
+    <thead>
+      <tr>
+        <th style="width:130px;">When</th>
+        <th style="width:80px;">Type</th>
+        <th style="width:70px;">Action</th>
+        <th>What Changed</th>
+        <th style="width:220px;">Editor</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <!-- When -->
+        <td class="small" style="color:var(--grey-mid); white-space:nowrap;">
+          {{ row.changed_at.strftime('%Y-%m-%d %H:%M') if row.changed_at else '—' }}
+        </td>
+
+        <!-- Type badge -->
+        <td>
+          {% if row.entity_type == 'set' %}
+            <span class="badge" style="background:rgba(122,92,56,.15); color:var(--sepia); font-weight:normal;">
+              <i class="bi bi-collection me-1"></i>Set
+            </span>
+          {% elif row.entity_type == 'card' %}
+            <span class="badge" style="background:rgba(60,90,130,.15); color:#2a4050; font-weight:normal;">
+              <i class="bi bi-card-text me-1"></i>Card
+            </span>
+          {% elif row.entity_type == 'player' %}
+            <span class="badge" style="background:rgba(40,120,60,.15); color:#1a5030; font-weight:normal;">
+              <i class="bi bi-person me-1"></i>Player
+            </span>
+          {% endif %}
+        </td>
+
+        <!-- Action -->
+        <td>
+          {% if row.action == 'DELETE' %}
+            <span class="badge" style="background:rgba(180,50,50,.15); color:#7a2020; font-weight:normal;">Delete</span>
+          {% else %}
+            <span class="badge" style="background:rgba(100,100,100,.12); color:var(--grey-mid); font-weight:normal;">Update</span>
+          {% endif %}
+        </td>
+
+        <!-- What changed + details button -->
+        <td style="color:var(--ink);">
+          <div class="d-flex align-items-center gap-2">
+            <div>
+              {% if row.entity_type == 'set' %}
+                {% if row.set_id %}
+                  <a href="/sets/{{ row.set_id }}" style="color:var(--sepia);">
+                    {% if row.year_start %}{{ row.year_start }} · {% endif %}
+                    {{ row.publisher or row.label }}
+                    {% if row.publisher and row.label != row.publisher %}<span class="text-muted"> — {{ row.label }}</span>{% endif %}
+                  </a>
+                {% else %}
+                  {{ row.label }}
+                {% endif %}
+              {% elif row.entity_type == 'card' %}
+                {% if row.set_id %}
+                  <a href="/sets/{{ row.set_id }}" style="color:var(--sepia);">
+                    {% if row.year_start %}{{ row.year_start }} · {% endif %}{{ row.publisher or row.label }}
+                  </a>
+                {% else %}
+                  {{ row.label }}
+                {% endif %}
+                {% if row.sub_label %}
+                  <span class="text-muted"> → </span>
+                  <span style="color:var(--ink);">{{ row.sub_label }}</span>
+                {% endif %}
+              {% elif row.entity_type == 'player' %}
+                {% if row.entity_id2 %}
+                  <a href="/players/{{ row.entity_id2 }}" style="color:var(--sepia);">{{ row.label }}</a>
+                {% else %}
+                  {{ row.label }}
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if row.history_id %}
+            <button class="btn btn-outline-secondary btn-sm py-0 px-1 flex-shrink-0"
+                    style="font-size:.7rem; line-height:1.4;"
+                    hx-get="/editor/changelog/detail?entity_type={{ row.entity_type }}&history_id={{ row.history_id }}"
+                    hx-target="#changelog-detail"
+                    hx-swap="innerHTML"
+                    title="Show what changed">
+              <i class="bi bi-zoom-in me-1"></i>Details
+            </button>
+            {% endif %}
+          </div>
+        </td>
+
+        <!-- Editor -->
+        <td class="small" style="color:var(--grey-mid);">
+          {% if row.changed_by %}
+            <i class="bi bi-person-circle me-1"></i>{{ row.changed_by }}
+          {% else %}
+            <span class="text-muted fst-italic">unknown</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Detail panel — populated when a Details button is clicked -->
+<div id="changelog-detail" class="mt-3"></div>
+{% endif %}

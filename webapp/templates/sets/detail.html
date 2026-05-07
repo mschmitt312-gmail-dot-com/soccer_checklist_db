@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}{{ the_set.publisher or the_set.set_name or "(Untitled)" }} — Soccer Card Checklist{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/sets">Sets</a></li>
+    <li class="breadcrumb-item active">{{ the_set.publisher or the_set.set_name or "(Untitled)" }}</li>
+  </ol>
+</nav>
+
+<!-- Set header -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-8">
+        <h2 class="mb-1">{{ the_set.publisher or "(Unknown Publisher)" }}</h2>
+        <div class="text-muted mb-2">
+          {% if the_set.year_start %}
+            <span class="me-2">
+              {% if the_set.year_end and the_set.year_end != the_set.year_start %}
+                {{ the_set.year_start }}–{{ the_set.year_end }}
+              {% else %}
+                {{ the_set.year_start }}
+              {% endif %}
+              {% if the_set.season_raw %}({{ the_set.season_raw }}){% endif %}
+            </span>
+          {% endif %}
+          <span>{{ the_set.set_name or "(Untitled)" }}</span>
+        </div>
+        {% if the_set.country %}
+          <div class="text-muted small mb-2">
+            <i class="bi bi-geo-alt me-1"></i>{{ the_set.country }}
+          </div>
+        {% endif %}
+        <div class="mb-2">
+          <span class="badge"
+                style="font-size:.72rem; font-family:'Crimson Text',serif; font-weight:normal;
+                       {% if the_set.category == 'other' %}
+                         background:rgba(108,117,125,.15); color:var(--grey-mid);
+                       {% else %}
+                         background:rgba(122,92,56,.15); color:var(--sepia);
+                       {% endif %}">
+            {% if the_set.category == 'other' %}Other{% else %}Football{% endif %}
+          </span>
+        </div>
+        {% if the_set.description %}
+          <p class="mb-0 text-secondary">{{ the_set.description }}</p>
+        {% endif %}
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <div class="display-6 fw-bold" style="color:var(--sepia)">{{ the_set.card_count }}</div>
+        <div class="text-muted">card{{ "s" if the_set.card_count != 1 }} in database</div>
+        {% if the_set.total_cards and the_set.total_cards != the_set.card_count %}
+        <div class="small text-muted">{{ the_set.total_cards }} declared in set</div>
+        {% endif %}
+        {% if the_set.source_url %}
+          <a href="{{ the_set.source_url }}" target="_blank" rel="noopener"
+             class="btn btn-outline-secondary btn-sm mt-2">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Source
+          </a>
+        {% endif %}
+        {% if request.session.get("user") %}
+          <a href="/editor/sets/{{ the_set.set_id }}"
+             class="btn btn-outline-secondary btn-sm mt-2 ms-1">
+            <i class="bi bi-pencil-square me-1"></i>Edit
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox overlay — always present so card-image links work even with no set images -->
+<div id="lightbox"
+     onclick="lightboxClose()"
+     style="display:none; position:fixed; inset:0; z-index:1000;
+            background:rgba(20,16,10,.92);
+            align-items:center; justify-content:center;">
+  <button onclick="event.stopPropagation(); lightboxStep(-1)"
+          style="position:absolute; left:16px; top:50%; transform:translateY(-50%);
+                 background:rgba(37,32,24,.7); color:var(--cream); border:none;
+                 font-size:2.5rem; line-height:1; padding:4px 14px; cursor:pointer; z-index:2;">
+    &#8249;
+  </button>
+  <img id="lightbox-img" src="" alt=""
+       style="max-height:90vh; max-width:90vw; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.6);"
+       onclick="event.stopPropagation()">
+  <button onclick="event.stopPropagation(); lightboxStep(1)"
+          style="position:absolute; right:16px; top:50%; transform:translateY(-50%);
+                 background:rgba(37,32,24,.7); color:var(--cream); border:none;
+                 font-size:2.5rem; line-height:1; padding:4px 14px; cursor:pointer; z-index:2;">
+    &#8250;
+  </button>
+  <span style="position:absolute; top:16px; right:20px; color:rgba(247,244,232,.55);
+               font-size:.85rem; pointer-events:none;">ESC or click outside to close</span>
+</div>
+
+<!-- Set image gallery (only when set-level images exist) -->
+{% if images %}
+<div class="card shadow-sm border-0 mb-4" style="overflow:hidden;">
+  <div class="position-relative" id="img-gallery-wrap">
+    <div id="img-gallery" style="overflow:hidden;">
+      <div id="img-track" style="display:flex; gap:6px; padding:6px; transition:transform .3s ease; will-change:transform;">
+        {% for img in images %}
+          {% set url = img.storage_url or img.filename %}
+          {% if url %}
+          <img src="{{ url }}" alt="Set image"
+               data-url="{{ url }}"
+               style="height:180px; width:auto; display:block; object-fit:cover; flex-shrink:0; cursor:zoom-in;"
+               onclick="lightboxOpen(this)"
+               onerror="this.style.display='none'">
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <button id="img-prev" onclick="galleryScroll(-1)"
+            style="display:none; position:absolute; left:0; top:0; bottom:0; width:44px;
+                   background:rgba(37,32,24,.55); color:var(--cream); border:none; cursor:pointer;
+                   font-size:1.8rem; line-height:1; z-index:2;">&#8249;</button>
+    <button id="img-next" onclick="galleryScroll(1)"
+            style="display:none; position:absolute; right:0; top:0; bottom:0; width:44px;
+                   background:rgba(37,32,24,.55); color:var(--cream); border:none; cursor:pointer;
+                   font-size:1.8rem; line-height:1; z-index:2;">&#8250;</button>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var lightbox    = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightbox-img');
+  var thumbs      = [];
+  var lbIndex     = 0;
+
+  // ── Carousel (only wired up when gallery exists) ──────────────────────────
+  var track   = document.getElementById('img-track');
+  var gallery = document.getElementById('img-gallery');
+  var btnPrev = document.getElementById('img-prev');
+  var btnNext = document.getElementById('img-next');
+  var offset  = 0;
+
+  if (track && gallery) {
+    function carouselUpdate() {
+      track.style.transform = 'translateX(-' + offset + 'px)';
+      var maxOffset = track.scrollWidth - gallery.offsetWidth;
+      btnPrev.style.display = offset > 0         ? 'block' : 'none';
+      btnNext.style.display = offset < maxOffset ? 'block' : 'none';
+    }
+
+    window.galleryScroll = function (dir) {
+      var step      = gallery.offsetWidth;
+      var maxOffset = track.scrollWidth - gallery.offsetWidth;
+      offset = Math.max(0, Math.min(maxOffset, offset + dir * step));
+      carouselUpdate();
+    };
+
+    window.addEventListener('load', carouselUpdate);
+    carouselUpdate();
+    window.addEventListener('resize', function () { offset = 0; carouselUpdate(); });
+
+    window.lightboxOpen = function (el) {
+      thumbs  = Array.from(track.querySelectorAll('img')).filter(function (i) {
+        return i.style.display !== 'none' && i.dataset.url;
+      });
+      lbIndex = thumbs.indexOf(el);
+      lightboxShow();
+    };
+  }
+
+  // ── Lightbox ──────────────────────────────────────────────────────────────
+  // Open with a direct URL — used by card-level image icons in the table
+  window.lightboxOpenUrl = function (url) {
+    lightboxImg.src = url;
+    lightbox.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    thumbs  = [];   // no arrow nav for single card images
+    lbIndex = 0;
+  };
+
+  window.lightboxClose = function () {
+    lightbox.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  window.lightboxStep = function (dir) {
+    if (!thumbs.length) return;
+    lbIndex = (lbIndex + dir + thumbs.length) % thumbs.length;
+    lightboxShow();
+  };
+
+  function lightboxShow() {
+    if (!thumbs.length) return;
+    lightboxImg.src = thumbs[lbIndex].dataset.url;
+    lightbox.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (lightbox.style.display === 'none') return;
+    if (e.key === 'Escape')     lightboxClose();
+    if (e.key === 'ArrowRight') lightboxStep(1);
+    if (e.key === 'ArrowLeft')  lightboxStep(-1);
+  });
+
+  // Card image links — use event delegation so HTMX-swapped rows work too
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('.card-img-link');
+    if (!link) return;
+    e.preventDefault();
+    var url = link.dataset.imgUrl;
+    if (url) lightboxOpenUrl(url);
+  });
+})();
+</script>
+
+<!-- Notes (if any) -->
+{% if notes %}
+<div class="mb-4">
+
+  <!-- First note — always visible, labelled Overview -->
+  <div class="alert alert-light border d-flex gap-2 mb-2">
+    <i class="bi bi-info-circle-fill text-secondary mt-1 flex-shrink-0"></i>
+    <div>
+      <div class="fw-semibold mb-1"
+           style="font-family:'Playfair Display',serif; font-size:.8rem;
+                  letter-spacing:.06em; text-transform:uppercase; color:var(--grey-mid);">
+        Overview
+      </div>
+      <span style="font-family:'Crimson Text',serif; font-size:.97rem;">{{ notes[0].note_text }}</span>
+      {% if notes[0].note_source == 'scraped' and notes[0].source_url %}
+        <a href="{{ notes[0].source_url }}" target="_blank" rel="noopener"
+           class="badge bg-light text-muted border ms-2 text-decoration-none">
+          source <i class="bi bi-box-arrow-up-right" style="font-size:.6rem"></i>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Additional notes — collapsed behind a toggle -->
+  {% if notes | length > 1 %}
+  <div>
+    <button id="extra-notes-btn"
+            onclick="toggleExtraNotes()"
+            class="btn btn-outline-secondary btn-sm"
+            style="font-family:'Crimson Text',serif; font-size:.9rem;">
+      <i class="bi bi-chevron-down me-1" id="extra-notes-icon"></i>Additional Notes
+      <span class="badge bg-secondary ms-1" style="font-size:.7rem;">{{ notes | length - 1 }}</span>
+    </button>
+    <div id="extra-notes" style="display:none;" class="mt-2">
+      {% for note in notes[1:] %}
+      <div class="alert alert-light border d-flex gap-2 mb-2">
+        <i class="bi bi-info-circle-fill text-secondary mt-1 flex-shrink-0"></i>
+        <div>
+          <span style="font-family:'Crimson Text',serif; font-size:.97rem;">{{ note.note_text }}</span>
+          {% if note.note_source == 'scraped' and note.source_url %}
+            <a href="{{ note.source_url }}" target="_blank" rel="noopener"
+               class="badge bg-light text-muted border ms-2 text-decoration-none">
+              source <i class="bi bi-box-arrow-up-right" style="font-size:.6rem"></i>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+    function toggleExtraNotes() {
+      var panel = document.getElementById('extra-notes');
+      var icon  = document.getElementById('extra-notes-icon');
+      var open  = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      icon.className = open ? 'bi bi-chevron-down me-1' : 'bi bi-chevron-up me-1';
+    }
+  </script>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Links (if any) -->
+{% if links %}
+<div class="mb-4">
+  <div class="mb-2">
+    <span style="font-family:'Playfair Display',serif; font-size:.8rem; letter-spacing:.06em;
+                 text-transform:uppercase; color:var(--grey-mid);">
+      <i class="bi bi-link-45deg me-1"></i>Links
+    </span>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% for link in links %}
+      <a href="{{ link.link_url }}" target="_blank" rel="noopener"
+         class="btn btn-outline-secondary btn-sm"
+         style="font-family:'Crimson Text',serif; font-size:.95rem;">
+        {{ link.link_name }}&nbsp;<i class="bi bi-box-arrow-up-right" style="font-size:.7rem;"></i>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Cards table -->
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
+    <h5 class="mb-0">Cards <span class="text-muted fw-normal small">({{ total }} total)</span></h5>
+    <!-- Search within set -->
+    <form id="card-search-form" class="d-flex gap-2" style="max-width:320px">
+      <input type="hidden" name="page" value="1">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input
+          type="search" name="q" class="form-control"
+          placeholder="Search cards…"
+          value="{{ q }}"
+          hx-get="/sets/{{ the_set.set_id }}"
+          hx-target="#cards-results"
+          hx-trigger="keyup changed delay:400ms, search"
+          hx-include="#card-search-form"
+        >
+      </div>
+    </form>
+  </div>
+
+  <div id="cards-results">
+    {% include "sets/detail_rows.html" %}
+  </div>
+</div>
+{% endblock %}

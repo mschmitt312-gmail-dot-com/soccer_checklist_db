@@ -1,0 +1,91 @@
+<div id="player-info-panel" class="card shadow-sm border-0 p-4">
+  <h6 class="mb-3" style="font-family:'Playfair Display',serif; color:var(--sepia);">
+    Edit Player
+  </h6>
+
+  <form hx-post="/editor/players/{{ player.player_id }}"
+        hx-target="#player-info-panel"
+        hx-swap="outerHTML">
+
+    <div class="mb-2">
+      <label class="form-label form-label-sm">First Name</label>
+      <input type="text" class="form-control form-control-sm" name="first_name"
+             value="{{ player.first_name or '' }}">
+    </div>
+    <div class="mb-2">
+      <label class="form-label form-label-sm">Last Name</label>
+      <input type="text" class="form-control form-control-sm" name="last_name"
+             value="{{ player.last_name or '' }}">
+    </div>
+    <div class="mb-2">
+      <label class="form-label form-label-sm">Nationality</label>
+      <input type="text" class="form-control form-control-sm" name="nationality"
+             value="{{ player.nationality or '' }}" placeholder="e.g. English">
+    </div>
+    <div class="mb-2">
+      <label class="form-label form-label-sm">Date of Birth</label>
+      <input type="date" class="form-control form-control-sm" name="date_of_birth"
+             value="{{ player.date_of_birth or '' }}">
+    </div>
+    <div class="mb-2">
+      <label class="form-label form-label-sm">Birthplace</label>
+      <input type="text" class="form-control form-control-sm" name="birth_place"
+             value="{{ player.birth_place or '' }}" placeholder="e.g. Liverpool, England">
+    </div>
+    <div class="mb-3">
+      <label class="form-label form-label-sm">Photo</label>
+      <div class="d-flex align-items-center gap-3">
+        {% if player.photo_url %}
+          <img src="{{ player.photo_url }}" alt="Current photo"
+               style="width:52px; height:52px; border-radius:50%; object-fit:cover;
+                      object-position:{{ player.photo_position or '50% 50%' }};
+                      border:1px solid var(--grey-light); flex-shrink:0;"
+               onerror="this.style.display='none'">
+        {% else %}
+          <i class="bi bi-person-circle text-secondary" style="font-size:2.5rem; flex-shrink:0;"></i>
+        {% endif %}
+        <a href="/editor/players/{{ player.player_id }}/photo"
+           class="btn btn-outline-secondary btn-sm"
+           style="font-family:'Crimson Text',serif; font-size:.88rem;">
+          <i class="bi bi-camera me-1"></i>{{ "Change Photo" if player.photo_url else "Add Photo" }}
+        </a>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-floppy me-1"></i>Save
+      </button>
+      <a href="/players/{{ player.player_id }}" class="btn btn-outline-secondary btn-sm">
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  <!-- Links section — editable inline, independent of the metadata form -->
+  <hr>
+  <div class="text-start">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+      <span class="text-muted small">Links</span>
+      <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+              style="font-size:.72rem;"
+              hx-get="/editor/players/{{ player.player_id }}/links/new-row"
+              hx-target="#player-links-list"
+              hx-swap="beforeend">
+        <i class="bi bi-plus-lg me-1"></i>Add link
+      </button>
+    </div>
+    <div id="player-links-list"
+         style="border: 1px solid var(--grey-light); border-radius: .375rem; overflow:hidden;">
+      {% if links %}
+        {% for link in links %}
+          {% include "editor/partials/player_link_row.html" %}
+        {% endfor %}
+      {% else %}
+        <div class="text-muted small p-3" style="font-family:'Crimson Text',serif;">
+          No links yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,28 @@
+<div id="link-row-{{ link.link_id }}">
+  <form id="link-edit-{{ link.link_id }}"
+        class="d-flex align-items-center gap-2 p-3 flex-wrap"
+        style="border-bottom: 1px solid var(--grey-light); background: rgba(122,92,56,.04);"
+        hx-post="/editor/sets/{{ set_id }}/links/{{ link.link_id }}"
+        hx-target="#link-row-{{ link.link_id }}"
+        hx-swap="outerHTML">
+
+    <input type="text" name="link_name" class="form-control form-control-sm" style="max-width:200px;"
+           placeholder="Link name" value="{{ link.link_name }}" required>
+
+    <input type="url" name="link_url" class="form-control form-control-sm" style="flex:1; min-width:220px;"
+           placeholder="https://…" value="{{ link.link_url }}" required>
+
+    <div class="d-flex gap-1 flex-shrink-0">
+      <button type="submit" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Save">
+        <i class="bi bi-check-lg"></i>
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Cancel"
+              hx-get="/editor/sets/{{ set_id }}/links/{{ link.link_id }}/view-row"
+              hx-target="#link-row-{{ link.link_id }}"
+              hx-swap="outerHTML">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+  </form>
+</div>

@@ -1,0 +1,149 @@
+<tr id="card-row-{{ card.card_id }}" style="background: rgba(122,92,56,.06);">
+  <td>
+    <input type="text" class="form-control form-control-sm" name="card_number"
+           form="card-edit-{{ card.card_id }}"
+           value="{{ card.card_number or '' }}"
+           placeholder="#" style="width:52px;">
+  </td>
+  <td>
+    <input type="text" class="form-control form-control-sm" name="name_in_set"
+           form="card-edit-{{ card.card_id }}"
+           value="{{ card.name_in_set or '' }}"
+           placeholder="Name on card" style="min-width:160px;">
+  </td>
+  <td>
+    <input type="text" class="form-control form-control-sm" name="club_raw"
+           form="card-edit-{{ card.card_id }}"
+           value="{{ card.club_raw or '' }}"
+           placeholder="Club" style="min-width:140px;">
+  </td>
+  <td style="min-width:180px; position:relative;">
+    <!-- Hidden input carries the actual player_id value on submit -->
+    <input type="hidden" name="player_id"
+           id="player-id-{{ card.card_id }}"
+           form="card-edit-{{ card.card_id }}"
+           value="{{ card.player_id or '' }}">
+
+    <!-- Display + clear row -->
+    <div class="d-flex align-items-center gap-1">
+      <span id="player-display-{{ card.card_id }}"
+            class="small"
+            style="{% if not card.player_id %}display:none;{% endif %} color:var(--sepia); font-family:'Crimson Text',serif;">
+        {{ (card.first_name or '') + ' ' + (card.last_name or '') if card.player_id else '' }}
+      </span>
+      <button type="button"
+              id="player-clear-{{ card.card_id }}"
+              onclick="clearPlayer({{ card.card_id }})"
+              class="btn btn-link btn-sm p-0 text-muted"
+              title="Clear player"
+              style="{% if not card.player_id %}display:none;{% endif %} font-size:.75rem; line-height:1;">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>
+
+    <!-- Search input (not submitted — no name/form attrs) -->
+    <input type="text"
+           id="player-search-{{ card.card_id }}"
+           class="form-control form-control-sm mt-1"
+           placeholder="Search player…"
+           autocomplete="off"
+           style="min-width:150px;"
+           hx-get="/editor/player-search?card_id={{ card.card_id }}"
+           hx-trigger="keyup changed delay:300ms"
+           hx-target="#player-results-{{ card.card_id }}"
+           name="q">
+
+    <!-- Results dropdown -->
+    <div id="player-results-{{ card.card_id }}"
+         style="display:none; position:absolute; z-index:200; left:0; right:0;
+                background:var(--cream); border:1px solid var(--grey-light);
+                border-radius:4px; max-height:200px; overflow-y:auto;
+                box-shadow:0 4px 12px rgba(0,0,0,.15);">
+    </div>
+  </td>
+  <td class="text-end pe-2">
+    <!-- Hidden form so submit can target the row -->
+    <form id="card-edit-{{ card.card_id }}"
+          hx-post="/editor/sets/{{ set_id }}/cards/{{ card.card_id }}"
+          hx-target="#card-row-{{ card.card_id }}"
+          hx-swap="outerHTML">
+    </form>
+    <button type="submit" form="card-edit-{{ card.card_id }}"
+            class="btn btn-success btn-sm py-0 px-2" title="Save">
+      <i class="bi bi-floppy"></i>
+    </button>
+    <button class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1"
+            title="Cancel"
+            hx-get="/editor/sets/{{ set_id }}/cards/{{ card.card_id }}/view-row"
+            hx-target="#card-row-{{ card.card_id }}"
+            hx-swap="outerHTML">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </td>
+</tr>
+
+<script>
+(function () {
+  var cardId = {{ card.card_id }};
+  var resultsId = 'player-results-' + cardId;
+
+  // Show/hide results after HTMX swaps content into the dropdown container.
+  // Listen at the document level — htmx:afterSwap fires on the target element
+  // and bubbles, so this reliably catches the swap regardless of HTMX version.
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.target.id !== resultsId) return;
+    e.target.style.display = e.target.innerHTML.trim() ? 'block' : 'none';
+  });
+
+  // Hide results when search input is cleared
+  var searchInput = document.getElementById('player-search-' + cardId);
+  searchInput.addEventListener('input', function () {
+    if (!this.value.trim()) {
+      var results = document.getElementById(resultsId);
+      results.style.display = 'none';
+      results.innerHTML = '';
+    }
+  });
+
+  // Click outside closes dropdown
+  document.addEventListener('click', function (e) {
+    var results = document.getElementById(resultsId);
+    if (!results) return;
+    var row = document.getElementById('card-row-' + cardId);
+    if (row && !row.contains(e.target)) {
+      results.style.display = 'none';
+    }
+  });
+})();
+
+function selectPlayer(cardId, playerId, name) {
+  document.getElementById('player-id-' + cardId).value             = playerId;
+  document.getElementById('player-display-' + cardId).textContent  = name;
+  document.getElementById('player-display-' + cardId).style.display = '';
+  document.getElementById('player-clear-' + cardId).style.display  = '';
+  document.getElementById('player-search-' + cardId).value         = '';
+  var r = document.getElementById('player-results-' + cardId);
+  r.style.display = 'none';
+  r.innerHTML = '';
+}
+
+function clearPlayer(cardId) {
+  document.getElementById('player-id-' + cardId).value             = '';
+  document.getElementById('player-display-' + cardId).textContent  = '';
+  document.getElementById('player-display-' + cardId).style.display = 'none';
+  document.getElementById('player-clear-' + cardId).style.display  = 'none';
+  document.getElementById('player-search-' + cardId).value         = '';
+}
+</script>
+
+<style>
+.player-result-item {
+  padding: 5px 10px;
+  font-size: .88rem;
+  font-family: 'Crimson Text', serif;
+  cursor: pointer;
+  border-bottom: 1px solid var(--grey-light);
+}
+.player-result-item:last-child { border-bottom: none; }
+.player-result-item:hover { background: rgba(122,92,56,.1); color: var(--sepia); }
+</style>

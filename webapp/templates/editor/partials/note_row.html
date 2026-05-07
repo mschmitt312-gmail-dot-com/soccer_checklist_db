@@ -1,0 +1,69 @@
+<div id="note-row-{{ note.note_id }}"
+     {% if saved %}style="animation: noteFlash .6s ease;"{% endif %}>
+
+  <div class="d-flex align-items-start gap-2 p-3"
+       style="border-bottom: 1px solid var(--grey-light);">
+
+    <!-- Label column -->
+    <div class="flex-shrink-0 pt-1" style="min-width:70px;">
+      {% if is_overview %}
+        <span class="badge"
+              style="background:rgba(122,92,56,.2); color:var(--sepia);
+                     font-family:'Playfair Display',serif; font-weight:normal; font-size:.72rem;
+                     letter-spacing:.03em;">
+          Overview
+        </span>
+      {% else %}
+        <span class="badge"
+              style="background:rgba(108,117,125,.1); color:var(--grey-mid);
+                     font-family:'Crimson Text',serif; font-weight:normal; font-size:.72rem;">
+          note
+        </span>
+      {% endif %}
+      <div class="mt-1">
+        {% if note.note_source == 'scraped' %}
+          <span class="badge"
+                style="background:transparent; color:var(--grey-mid); border:1px solid var(--grey-light);
+                       font-family:'Crimson Text',serif; font-weight:normal; font-size:.65rem;">
+            scraped
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Note text -->
+    <div class="flex-grow-1" style="font-family:'Crimson Text',serif; font-size:.97rem; line-height:1.5;">
+      {{ note.note_text }}
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex-shrink-0 d-flex gap-1">
+      <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+              title="Edit note"
+              hx-get="/editor/sets/{{ set_id }}/notes/{{ note.note_id }}/edit-row"
+              hx-target="#note-row-{{ note.note_id }}"
+              hx-swap="outerHTML">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+              title="Delete note"
+              hx-delete="/editor/sets/{{ set_id }}/notes/{{ note.note_id }}"
+              hx-target="#note-row-{{ note.note_id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this note? This cannot be undone.">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+{% if saved %}
+<style>
+  @keyframes noteFlash {
+    0%   { background: rgba(122,92,56,.18); }
+    100% { background: transparent; }
+  }
+</style>
+{% endif %}

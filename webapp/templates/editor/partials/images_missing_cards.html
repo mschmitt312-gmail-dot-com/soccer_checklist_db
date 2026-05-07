@@ -1,0 +1,105 @@
+<!-- Tab 1: Cards Missing Images -->
+<div class="p-3 d-flex align-items-center gap-3 flex-wrap"
+     style="background:var(--cream); border-bottom: 1px solid var(--sepia-pale);">
+  <span class="small" style="font-family:'Crimson Text',serif; color:var(--grey-mid);">
+    {% if no_filter %}
+      Use the filters to find cards with no image
+    {% else %}
+      <strong style="color:var(--ink);">{{ total }}</strong> card{{ 's' if total != 1 }} with no image
+    {% endif %}
+  </span>
+
+  <!-- Filters -->
+  <form id="missing-filter-form" class="d-flex gap-2 align-items-center ms-auto flex-wrap">
+
+    <!-- Player / card name search -->
+    <input type="search" name="q" class="form-control form-control-sm" style="max-width:180px;"
+           placeholder="Search name or player…"
+           value="{{ q }}"
+           hx-get="/editor/images/missing-cards"
+           hx-target="#tab-content"
+           hx-swap="innerHTML"
+           hx-include="#missing-filter-form"
+           hx-trigger="keyup changed delay:400ms, search">
+
+    <!-- Set filter -->
+    <select class="form-select form-select-sm" name="set_id" style="max-width:280px;"
+            hx-get="/editor/images/missing-cards"
+            hx-target="#tab-content"
+            hx-swap="innerHTML"
+            hx-include="#missing-filter-form"
+            hx-trigger="change">
+      <option value="0" {% if not set_id %}selected{% endif %}>All sets</option>
+      {% for s in sets %}
+        <option value="{{ s.set_id }}" {% if s.set_id == set_id %}selected{% endif %}>
+          {% if s.year_start %}{{ s.year_start }} · {% endif %}{{ s.publisher or s.set_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if no_filter %}
+  <div class="p-5 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+    <i class="bi bi-funnel" style="font-size:2rem; color:var(--sepia-pale);"></i>
+    <div class="mt-2">Select a set or enter a player / card name above to load results.</div>
+  </div>
+{% elif not cards %}
+  <div class="p-5 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+    <i class="bi bi-check-circle" style="font-size:2rem; color:#5a7a5a;"></i>
+    <div class="mt-2">No cards missing images{% if set_id or q %} matching your filters{% endif %}. Great work!</div>
+  </div>
+{% else %}
+<div class="table-responsive">
+  <table class="table table-hover table-sm table-bordered mb-0" style="font-size:.88rem;">
+    <thead>
+      <tr>
+        <th>Set</th>
+        <th>#</th>
+        <th>Name on Card</th>
+        <th>Player</th>
+        <th style="width:60px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for card in cards %}
+      <tr>
+        <td class="small" style="color:var(--ink);">
+          <span style="color:var(--grey-mid);">{% if card.year_start %}{{ card.year_start }} · {% endif %}</span>
+          <strong>{{ card.publisher or card.set_name }}</strong>
+          {% if card.publisher and card.set_name %}
+            <div style="color:var(--grey-mid); font-size:.78rem;">{{ card.set_name }}</div>
+          {% endif %}
+        </td>
+        <td class="small" style="color:var(--grey-mid);">{{ card.card_number or '—' }}</td>
+        <td style="color:var(--ink);">{{ card.name_in_set or '—' }}</td>
+        <td class="small" style="color:var(--grey-mid);">
+          {% if card.first_name or card.last_name %}
+            {{ card.first_name or '' }} {{ card.last_name or '' }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-end">
+          <a href="/editor/sets/{{ card.set_id }}/cards/{{ card.card_id }}/images"
+             class="btn btn-outline-secondary btn-sm py-0 px-2"
+             title="Add image"
+             target="_self" hx-boost="false">
+            <i class="bi bi-camera"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<div class="d-flex justify-content-center gap-1 p-3" style="background:var(--cream); border-top: 1px solid var(--sepia-pale);">
+  {% for p in range(1, total_pages + 1) %}
+    <button class="btn btn-sm {% if p == page %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+            hx-get="/editor/images/missing-cards?page={{ p }}&set_id={{ set_id }}&q={{ q }}"
+            hx-target="#tab-content"
+            hx-swap="innerHTML">{{ p }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}

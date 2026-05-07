@@ -1,0 +1,167 @@
+<tr id="card-row-new" style="background: rgba(122,92,56,.06);">
+  <td>
+    <input type="text" class="form-control form-control-sm" name="card_number"
+           form="card-new-form"
+           placeholder="#" style="width:52px;">
+  </td>
+  <td>
+    <input type="text" class="form-control form-control-sm" name="name_in_set"
+           id="new-card-name"
+           form="card-new-form"
+           placeholder="Name on card" autofocus style="min-width:160px;">
+  </td>
+  <td>
+    <input type="text" class="form-control form-control-sm" name="club_raw"
+           form="card-new-form"
+           placeholder="Club" style="min-width:140px;">
+  </td>
+
+  <!-- Player search column -->
+  <td style="min-width:200px; position:relative;">
+    <input type="hidden" name="player_id"
+           id="new-player-id"
+           form="card-new-form"
+           value="">
+
+    <!-- Selected player display -->
+    <div class="d-flex align-items-center gap-1 mb-1">
+      <span id="new-player-display"
+            class="small"
+            style="display:none; color:var(--sepia); font-family:'Crimson Text',serif;"></span>
+      <button type="button"
+              id="new-player-clear"
+              onclick="newCardClearPlayer()"
+              class="btn btn-link btn-sm p-0 text-muted"
+              title="Clear player"
+              style="display:none; font-size:.75rem; line-height:1;">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>
+
+    <!-- Search input -->
+    <input type="text"
+           id="new-player-search"
+           class="form-control form-control-sm"
+           placeholder="Search player…"
+           autocomplete="off"
+           hx-get="/editor/player-search?card_id=0"
+           hx-trigger="keyup changed delay:300ms"
+           hx-target="#new-player-results"
+           name="q">
+
+    <!-- Results dropdown -->
+    <div id="new-player-results"
+         style="display:none; position:absolute; z-index:200; left:0; right:0;
+                background:var(--cream); border:1px solid var(--grey-light);
+                border-radius:4px; max-height:200px; overflow-y:auto;
+                box-shadow:0 4px 12px rgba(0,0,0,.15);">
+    </div>
+
+    <!-- Create new player button -->
+    <button type="button"
+            onclick="newCardCreatePlayer()"
+            class="btn btn-outline-secondary btn-sm mt-1"
+            style="font-size:.78rem; font-family:'Crimson Text',serif; white-space:nowrap;">
+      <i class="bi bi-person-plus me-1"></i>Create New Player
+    </button>
+  </td>
+
+  <td class="text-end pe-2">
+    <form id="card-new-form"
+          hx-post="/editor/sets/{{ set_id }}/cards"
+          hx-target="#card-row-new"
+          hx-swap="outerHTML">
+    </form>
+    <button type="submit" form="card-new-form"
+            class="btn btn-success btn-sm py-0 px-2" title="Add">
+      <i class="bi bi-floppy"></i>
+    </button>
+    <button class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1"
+            title="Cancel"
+            onclick="this.closest('tr').remove(); return false;">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </td>
+</tr>
+
+<script>
+(function () {
+  // Show results after HTMX swaps content into the dropdown
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.target.id !== 'new-player-results') return;
+    e.target.style.display = e.target.innerHTML.trim() ? 'block' : 'none';
+  });
+
+  // Hide results when search is cleared
+  document.getElementById('new-player-search').addEventListener('input', function () {
+    if (!this.value.trim()) {
+      var r = document.getElementById('new-player-results');
+      r.style.display = 'none';
+      r.innerHTML = '';
+    }
+  });
+
+  // Click outside closes dropdown
+  document.addEventListener('click', function (e) {
+    var r = document.getElementById('new-player-results');
+    if (!r) return;
+    var row = document.getElementById('card-row-new');
+    if (row && !row.contains(e.target)) r.style.display = 'none';
+  });
+})();
+
+// Called by search result items (card_id=0 placeholder; selectPlayer handles new row)
+function selectPlayer(cardId, playerId, name) {
+  document.getElementById('new-player-id').value = playerId;
+  document.getElementById('new-player-display').textContent = name;
+  document.getElementById('new-player-display').style.display = '';
+  document.getElementById('new-player-clear').style.display = '';
+  document.getElementById('new-player-search').value = '';
+  var r = document.getElementById('new-player-results');
+  r.style.display = 'none';
+  r.innerHTML = '';
+}
+
+function newCardClearPlayer() {
+  document.getElementById('new-player-id').value = '';
+  document.getElementById('new-player-display').textContent = '';
+  document.getElementById('new-player-display').style.display = 'none';
+  document.getElementById('new-player-clear').style.display = 'none';
+  document.getElementById('new-player-search').value = '';
+}
+
+function newCardCreatePlayer() {
+  var nameInput = document.getElementById('new-card-name');
+  var rawName   = (nameInput ? nameInput.value : '').trim();
+  if (!rawName) {
+    alert('Please enter a name on card first.');
+    nameInput && nameInput.focus();
+    return;
+  }
+
+  var btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating…';
+
+  var body = new FormData();
+  body.append('name', rawName);
+
+  fetch('/editor/player-quick-create', { method: 'POST', body: body })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.error) { alert(data.error); return; }
+      selectPlayer(0, data.player_id, data.display_name);
+      btn.innerHTML = data.created
+        ? '<i class="bi bi-person-check me-1"></i>Player Created'
+        : '<i class="bi bi-person-check me-1"></i>Player Found';
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-outline-success');
+    })
+    .catch(function () {
+      alert('Could not create player. Please try again.');
+    })
+    .finally(function () {
+      btn.disabled = false;
+    });
+}
+</script>

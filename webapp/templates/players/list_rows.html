@@ -1,0 +1,104 @@
+{# Partial — returned by HTMX to update just the results area #}
+
+{% if has_filters %}
+
+<!-- Count + active filter chips -->
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+  <span class="text-muted small">{{ "{:,}".format(total) }} result{{ "s" if total != 1 }}</span>
+  {% if q %}
+    <a href="/players?club={{ club }}&country={{ country }}"
+       class="badge text-decoration-none d-inline-flex align-items-center gap-1 px-2 py-1"
+       style="background:var(--sepia-pale); color:var(--slate); border:1px solid var(--sepia); font-weight:500; font-size:.75rem;">
+      <i class="bi bi-person-search" style="font-size:.65rem"></i>
+      {{ q }}
+      <i class="bi bi-x ms-1"></i>
+    </a>
+  {% endif %}
+  {% if club %}
+    <a href="/players?q={{ q }}&country={{ country }}"
+       class="badge text-decoration-none d-inline-flex align-items-center gap-1 px-2 py-1"
+       style="background:var(--sepia-pale); color:var(--slate); border:1px solid var(--sepia); font-weight:500; font-size:.75rem;">
+      <i class="bi bi-shield" style="font-size:.65rem"></i>
+      {{ club }}
+      <i class="bi bi-x ms-1"></i>
+    </a>
+  {% endif %}
+  {% if country %}
+    <a href="/players?q={{ q }}&club={{ club }}"
+       class="badge text-decoration-none d-inline-flex align-items-center gap-1 px-2 py-1"
+       style="background:var(--sepia-pale); color:var(--slate); border:1px solid var(--sepia); font-weight:500; font-size:.75rem;">
+      <i class="bi bi-geo-alt" style="font-size:.65rem"></i>
+      {{ country }}
+      <i class="bi bi-x ms-1"></i>
+    </a>
+  {% endif %}
+</div>
+
+{% if players %}
+<div class="table-responsive mb-3">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Appears in</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in players %}
+      <tr>
+        <td>
+          <a href="/players/{{ p.player_id }}" class="text-decoration-none fw-medium">
+            {% if p.first_name %}{{ p.first_name }} {% endif %}{{ p.last_name or p.name_raw }}
+          </a>
+        </td>
+        <td class="text-muted small">
+          {{ p.set_count }} set{{ "s" if p.set_count != 1 }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav>
+  <ul class="pagination justify-content-center">
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      <a class="page-link"
+         href="?q={{ q }}&club={{ club }}&country={{ country }}&page={{ page - 1 }}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link"
+         href="?q={{ q }}&club={{ club }}&country={{ country }}&page={{ p }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      <a class="page-link"
+         href="?q={{ q }}&club={{ club }}&country={{ country }}&page={{ page + 1 }}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-person-x display-4 d-block mb-3"></i>
+  No players found.
+  <div class="mt-2"><a href="/players">Clear filters</a></div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- No filters entered yet — prompt the user -->
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-person-search display-4 d-block mb-3"></i>
+  <p class="mb-1">Enter a name, club, or country above to search players.</p>
+  <p class="small">The archive contains {{ "{:,}".format(total_players) }} players across all card sets.</p>
+</div>
+{% endif %}

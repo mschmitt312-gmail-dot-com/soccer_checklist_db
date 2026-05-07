@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Soccer Card Checklist — Home{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="p-5 mb-4 text-center"
+     style="background: var(--slate);
+            border: 1px solid var(--slate-soft);
+            border-top: 5px double var(--sepia-pale);
+            border-bottom: 5px double var(--sepia-pale);">
+  <p class="mb-1" style="color:var(--sepia-pale); letter-spacing:.35em; font-size:.78rem; text-transform:uppercase; font-family:'Playfair Display',serif;">
+    Est. 1890s &mdash; The Historical Record
+  </p>
+  <h1 class="display-4 fw-bold mb-2" style="color:var(--cream); letter-spacing:.06em;">
+    Soccer Card Checklist
+  </h1>
+  <div class="vintage-divider" style="color:var(--sepia-pale); margin: .5rem 0 1rem;">
+    ✦ ✦ ✦
+  </div>
+  <p class="mb-4 mx-auto" style="color: rgba(247,244,232,.65); max-width:540px; font-family:'Crimson Text',serif; font-size:1.15rem; font-style:italic;">
+    A comprehensive archive of historical football card &amp; sticker sets.
+    Search by player, club, or country across the full catalogue.
+  </p>
+  <div class="d-flex gap-3 flex-wrap justify-content-center">
+    <a href="/sets" class="btn btn-lg px-5"
+       style="background:var(--sepia); color:var(--cream); border:1px solid var(--sepia-pale); font-size:1rem;">
+      <i class="bi bi-collection me-2"></i>Browse Sets
+    </a>
+    <a href="/players" class="btn btn-lg px-5"
+       style="background:transparent; color:var(--sepia-pale); border:1px solid var(--sepia-pale); font-size:1rem;">
+      <i class="bi bi-people me-2"></i>Search Players
+    </a>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-5 justify-content-center">
+  <div class="col-6 col-md-4">
+    <div class="card stat-card shadow-sm text-center p-3 h-100">
+      <div class="display-5">{{ "{:,}".format(stats.total_sets or 0) }}</div>
+      <div class="text-muted mt-1"><i class="bi bi-collection me-1"></i>Card Sets</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card stat-card shadow-sm text-center p-3 h-100">
+      <div class="display-5">{{ "{:,}".format(stats.total_cards or 0) }}</div>
+      <div class="text-muted mt-1"><i class="bi bi-card-image me-1"></i>Cards</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card stat-card shadow-sm text-center p-3 h-100">
+      <div class="display-5">{{ "{:,}".format(stats.total_players or 0) }}</div>
+      <div class="text-muted mt-1"><i class="bi bi-person me-1"></i>Players</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick search -->
+<div class="row justify-content-center mb-5">
+  <div class="col-md-8">
+    <div class="card shadow-sm border-0 p-4">
+      <h5 class="mb-3"><i class="bi bi-search me-1"></i>Quick Search</h5>
+      <div class="d-flex gap-2 flex-wrap">
+        <form class="flex-grow-1 d-flex gap-2" action="/sets" method="get">
+          <input class="form-control" type="search" name="q"
+                 placeholder="Search card sets…">
+          <button class="btn btn-success px-3" type="submit">Sets</button>
+        </form>
+        <form class="flex-grow-1 d-flex gap-2" action="/players" method="get">
+          <input class="form-control" type="search" name="q"
+                 placeholder="Search players…">
+          <button class="btn btn-outline-secondary px-3" type="submit">Players</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

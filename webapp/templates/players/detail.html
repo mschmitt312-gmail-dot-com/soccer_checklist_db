@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if player.first_name %}{{ player.first_name }} {% endif %}{{ player.last_name or player.name_raw }} — Soccer Card Checklist
+{% endblock %}
+
+{% block content %}
+<!-- Lightbox -->
+<div id="lightbox"
+     onclick="lightboxClose()"
+     style="display:none; position:fixed; inset:0; z-index:1000;
+            background:rgba(20,16,10,.92);
+            align-items:center; justify-content:center;">
+  <img id="lightbox-img" src="" alt=""
+       style="max-height:90vh; max-width:90vw; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.6);"
+       onclick="event.stopPropagation()">
+  <span style="position:absolute; top:16px; right:20px; color:rgba(247,244,232,.55);
+               font-size:.85rem; pointer-events:none;">ESC or click outside to close</span>
+</div>
+<script>
+function lightboxOpenUrl(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function lightboxClose() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') lightboxClose();
+});
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.card-img-link');
+  if (!link) return;
+  e.preventDefault();
+  var url = link.dataset.imgUrl;
+  if (url) lightboxOpenUrl(url);
+});
+</script>
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/players">Players</a></li>
+    <li class="breadcrumb-item active">
+      {% if player.first_name %}{{ player.first_name }} {% endif %}{{ player.last_name or player.name_raw }}
+    </li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <!-- Player info card -->
+  <div class="col-md-4 col-lg-3">
+    <div id="player-info-panel" class="card shadow-sm border-0 text-center p-4">
+
+      <!-- Photo or placeholder icon -->
+      <div class="mb-3">
+        {% if player.photo_url %}
+          <img src="{{ player.photo_url }}" alt="{{ player.last_name }}"
+               style="width:96px; height:96px; border-radius:50%; object-fit:cover;
+                      object-position:{{ player.photo_position or '50% 50%' }};
+                      border:2px solid var(--grey-light); box-shadow:0 2px 8px rgba(0,0,0,.12);">
+        {% else %}
+          <i class="bi bi-person-circle text-secondary" style="font-size:4rem"></i>
+        {% endif %}
+      </div>
+
+      <h4 class="mb-1">
+        {% if player.first_name %}{{ player.first_name }}<br>{% endif %}
+        <span class="fw-bold">{{ player.last_name or player.name_raw }}</span>
+      </h4>
+      {% if player.nationality %}
+        <div class="text-muted small mb-2">{{ player.nationality }}</div>
+      {% endif %}
+
+      <hr>
+
+      <dl class="text-start mb-0 small">
+        {% if player.birth_year or player.date_of_birth %}
+          <dt class="text-muted">Born</dt>
+          <dd>
+            {% if player.date_of_birth %}{{ player.date_of_birth }}
+            {% else %}c. {{ player.birth_year }}{% endif %}
+            {% if player.birth_place %}
+              <span class="text-muted"> · {{ player.birth_place }}</span>
+            {% endif %}
+          </dd>
+        {% elif player.birth_place %}
+          <dt class="text-muted">Birthplace</dt>
+          <dd>{{ player.birth_place }}</dd>
+        {% endif %}
+        <dt class="text-muted">Card appearances</dt>
+        <dd>{{ appearances|length }} card{{ "s" if appearances|length != 1 }}</dd>
+        <dt class="text-muted">Sets featured in</dt>
+        <dd>{{ appearances|map(attribute='set_id')|list|unique|list|length }}</dd>
+      </dl>
+
+      {% if clubs %}
+      <hr>
+      <div class="text-start small">
+        <div class="text-muted mb-1">Clubs on cards</div>
+        {% for c in clubs %}
+          <span class="badge bg-light text-dark border me-1 mb-1">{{ c.club_raw }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if links %}
+      <hr>
+      <div class="text-start small">
+        <div class="text-muted mb-1">Links</div>
+        <div class="d-flex flex-wrap gap-1">
+          {% for link in links %}
+            <a href="{{ link.link_url }}" target="_blank" rel="noopener"
+               class="btn btn-outline-secondary btn-sm py-0 px-2"
+               style="font-size:.78rem; font-family:'Crimson Text',serif;">
+              <i class="bi bi-box-arrow-up-right me-1"></i>{{ link.link_name }}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if request.session.get("user") %}
+      <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
+        <button class="btn btn-outline-secondary btn-sm"
+                style="font-family:'Crimson Text',serif; font-size:.88rem;"
+                hx-get="/editor/players/{{ player.player_id }}/edit-panel"
+                hx-target="#player-info-panel"
+                hx-swap="outerHTML">
+          <i class="bi bi-pencil-square me-1"></i>Edit
+        </button>
+        <a href="/editor/players/{{ player.player_id }}/merge"
+           class="btn btn-outline-secondary btn-sm"
+           style="font-family:'Crimson Text',serif; font-size:.88rem;">
+          <i class="bi bi-arrow-left-right me-1"></i>Merge
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Appearances table -->
+  <div class="col-md-8 col-lg-9">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white py-3">
+        <h5 class="mb-0">Card Appearances</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Set</th>
+              <th>Year</th>
+              <th>Name on Card</th>
+              <th>Club / Country</th>
+              <th class="text-center">Image</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in appearances %}
+            <tr>
+              <td>
+                <a href="/sets/{{ a.set_id }}" class="text-decoration-none fw-semibold">
+                  {{ a.publisher or "(Unknown Publisher)" }}
+                </a>
+                <div class="text-muted small">{{ a.set_name }}</div>
+              </td>
+              <td class="small text-nowrap">
+                {% if a.year_start %}
+                  {% if a.year_end and a.year_end != a.year_start %}
+                    {{ a.year_start }}–{{ a.year_end }}
+                  {% else %}
+                    {{ a.year_start }}
+                  {% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td class="small">{{ a.name_in_set.split('(')[0].strip() if a.name_in_set else "" }}</td>
+              <td class="small text-muted">{{ a.club_raw or a.country_name or "" }}</td>
+              <td class="text-center">
+                {% if a.card_image_url %}
+                  <a href="#" class="card-img-link" data-img-url="{{ a.card_image_url }}"
+                     title="View card image">
+                    <i class="bi bi-image" style="color:var(--sepia);"></i>
+                  </a>
+                {% else %}
+                  <span class="text-muted" style="font-size:.75rem;">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No appearances found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

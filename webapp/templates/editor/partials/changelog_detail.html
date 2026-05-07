@@ -1,0 +1,64 @@
+<div class="card" style="border: 1px solid var(--sepia-pale); border-left: 4px solid var(--sepia) !important;">
+  <div class="card-body p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h6 class="mb-0" style="font-family:'Playfair Display',serif; color:var(--ink);">
+        <i class="bi bi-zoom-in me-2" style="color:var(--sepia);"></i>
+        Change Details
+        <span class="text-muted fw-normal" style="font-size:.8rem; font-family:'Crimson Text',serif;">
+          — {{ changed_at.strftime('%Y-%m-%d %H:%M') if changed_at else '' }}
+          ({{ action }})
+        </span>
+      </h6>
+      <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+              style="font-size:.75rem;"
+              onclick="document.getElementById('changelog-detail').innerHTML=''">
+        <i class="bi bi-x"></i> Close
+      </button>
+    </div>
+
+    {% set any_changed = diff | selectattr('changed') | list %}
+
+    {% if not diff %}
+      <p class="text-muted mb-0" style="font-family:'Crimson Text',serif;">No field data available.</p>
+    {% else %}
+    <table class="table table-sm table-bordered mb-0" style="font-size:.82rem;">
+      <thead>
+        <tr>
+          <th style="width:130px; color:var(--grey-mid);">Field</th>
+          <th style="color:var(--grey-mid);">Before</th>
+          <th style="color:var(--grey-mid);">After (current)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in diff %}
+        <tr {% if row.changed %}style="background:rgba(122,92,56,.07);"{% endif %}>
+          <td style="color:var(--grey-mid); white-space:nowrap;">
+            {% if row.changed %}<strong style="color:var(--sepia);">{{ row.label }}</strong>{% else %}{{ row.label }}{% endif %}
+          </td>
+          <td style="color:var(--ink);">
+            {% if row.changed %}
+              <span style="background:rgba(180,50,50,.1); padding:1px 4px; border-radius:3px;">{{ row.old }}</span>
+            {% else %}
+              <span class="text-muted">{{ row.old }}</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--ink);">
+            {% if row.changed %}
+              <span style="background:rgba(40,120,60,.1); padding:1px 4px; border-radius:3px;">{{ row.new }}</span>
+            {% else %}
+              <span class="text-muted">{{ row.new }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not any_changed %}
+      <p class="text-muted mt-2 mb-0 small" style="font-family:'Crimson Text',serif;">
+        <i class="bi bi-info-circle me-1"></i>No tracked fields differ from the current record.
+        The change may have been to a field not shown here, or was later revised.
+      </p>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>

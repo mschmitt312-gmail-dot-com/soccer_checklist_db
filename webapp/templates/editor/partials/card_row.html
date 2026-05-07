@@ -1,0 +1,53 @@
+<tr id="card-row-{{ card.card_id }}"
+    {% if saved %}style="animation: rowFlash .6s ease;"{% endif %}>
+  <td class="text-muted">{{ card.card_number or "—" }}</td>
+  <td>{{ card.name_in_set or "—" }}</td>
+  <td class="text-muted">{{ card.club_raw or "" }}</td>
+  <td class="text-muted small">
+    {% if card.player_id %}
+      <a href="/players/{{ card.player_id }}" style="color:var(--grey-mid);">
+        {{ card.first_name or "" }} {{ card.last_name or "" }}
+      </a>
+      {% if card.player_set_count and card.player_set_count > 1 %}
+        <span style="font-size:.75rem; color:var(--grey-mid); margin-left:3px;">
+          ({{ card.player_set_count }} sets)
+        </span>
+      {% endif %}
+    {% else %}
+      <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+  <td class="text-end pe-2">
+    <a href="/editor/sets/{{ set_id }}/cards/{{ card.card_id }}/images"
+       class="btn btn-sm py-0 px-2 {% if card.has_image %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+       title="{% if card.has_image %}Edit card image (has image){% else %}Add card image{% endif %}"
+       target="_self"
+       hx-boost="false">
+      <i class="bi bi-camera"></i>
+    </a>
+    <button class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1"
+            title="Edit card"
+            hx-get="/editor/sets/{{ set_id }}/cards/{{ card.card_id }}/edit-row"
+            hx-target="#card-row-{{ card.card_id }}"
+            hx-swap="outerHTML">
+      <i class="bi bi-pencil"></i>
+    </button>
+    <button class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1"
+            title="Delete card"
+            hx-delete="/editor/sets/{{ set_id }}/cards/{{ card.card_id }}"
+            hx-target="#card-row-{{ card.card_id }}"
+            hx-swap="outerHTML"
+            hx-confirm="Delete this card? This cannot be undone.">
+      <i class="bi bi-trash"></i>
+    </button>
+  </td>
+</tr>
+
+{% if saved %}
+<style>
+  @keyframes rowFlash {
+    0%   { background: rgba(122,92,56,.18); }
+    100% { background: transparent; }
+  }
+</style>
+{% endif %}
