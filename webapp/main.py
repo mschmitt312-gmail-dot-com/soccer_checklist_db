@@ -34,11 +34,18 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, https_only=False)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Local image serving - points at the scraped soccer_checklists/ folder one level up.
-# Only active when use_local_images=True in config. Switch off for Azure deployment.
+# Local image serving - points at the soccer_checklists/ folder.
+# Configure the path via checklists_dir in config.py.
+# Only active when use_local_images=True. Switch off for Azure deployment.
 if APP_CONFIG.get("use_local_images"):
-    _checklists_dir = os.path.join(os.path.dirname(__file__), "..", "soccer_checklists")
-    app.mount("/local-images", StaticFiles(directory=_checklists_dir), name="local-images")
+    _checklists_dir = APP_CONFIG.get("checklists_dir") or os.path.join(
+        os.path.dirname(__file__), "..", "soccer_checklists"
+    )
+    _checklists_dir = os.path.normpath(_checklists_dir)
+    if os.path.isdir(_checklists_dir):
+        app.mount("/local-images", StaticFiles(directory=_checklists_dir), name="local-images")
+    else:
+        print(f"WARNING: checklists_dir not found at '{_checklists_dir}' — local images disabled.")
 
 templates = Jinja2Templates(directory="templates")
 

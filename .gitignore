@@ -1,0 +1,7 @@
+soccer_checklists/
+webapp/config.py
+__pycache__/
+*.pyc
+venv*/
+.env
+config.py

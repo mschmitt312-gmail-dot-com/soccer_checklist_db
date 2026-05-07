@@ -15,9 +15,12 @@ APP_CONFIG = dict(
     title="Soccer Card Checklist",
     description="Browse historical soccer card and sticker sets",
     items_per_page=24,
-    # Set True locally to serve images from the scraped soccer_checklists/ folder.
+    # Set True locally to serve images from the soccer_checklists/ folder.
     # Set False (or remove) when deploying to Azure — images will use storage_url instead.
     use_local_images=True,
+    # Absolute path to the soccer_checklists folder on this machine.
+    # If None, the app will look for soccer_checklists/ one level above the webapp/ folder.
+    checklists_dir=r"C:\Users\mschm\OneDrive\Documents\Claude\Projects\soccer_checklists",
 )
 
 # ── Auth config ───────────────────────────────────────────────────────────────
