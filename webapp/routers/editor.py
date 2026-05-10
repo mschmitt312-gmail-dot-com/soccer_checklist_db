@@ -1342,10 +1342,15 @@ async def link_image_to_card(request: Request, set_id: int, card_id: int, image_
     if not row:
         return HTMLResponse("<p class='text-danger small'>Card not found.</p>", status_code=404)
 
-    src = query(
-        "SELECT image_id, filename, storage_url FROM images WHERE image_id = %s AND set_id = %s",
-        (image_id, set_id), one=True,
-    )
+    # Source image lookup is no longer restricted to the destination set —
+    # editors can search the whole image library and link any image to a card.
+    src = query("""
+        SELECT i.image_id, i.filename, i.storage_url, i.set_id,
+               s.og_title AS src_og_title
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        WHERE i.image_id = %s
+    """, (image_id,), one=True)
     if not src:
         return HTMLResponse("<p class='text-danger small'>Image not found.</p>", status_code=404)
 
@@ -1359,15 +1364,26 @@ async def link_image_to_card(request: Request, set_id: int, card_id: int, image_
             "<span class='text-warning small'><i class='bi bi-exclamation-triangle me-1'></i>Already linked to this card.</span>"
         )
 
+    # Resolve the storage_url to write on the new row.
+    #   - If the source already has an absolute storage_url (Azure mode), copy it.
+    #   - If we're cross-set in local mode, bake the source's resolved local
+    #     path into storage_url so the file resolves to the source set's folder
+    #     instead of the destination's (which wouldn't contain the file).
+    #   - Same-set in local mode keeps storage_url NULL (existing behaviour).
+    final_storage_url = src.get("storage_url")
+    if not final_storage_url and src["set_id"] != set_id:
+        if APP_CONFIG.get("use_local_images"):
+            final_storage_url = _local_image_url(src["src_og_title"], src["filename"])
+
     new_id = execute(
         "INSERT INTO images (set_id, card_id, filename, storage_url) VALUES (%s, %s, %s, %s)",
-        (set_id, card_id, src["filename"], src.get("storage_url")),
+        (set_id, card_id, src["filename"], final_storage_url),
     )
 
     img = {
         "image_id":    new_id,
         "filename":    src["filename"],
-        "storage_url": src.get("storage_url"),
+        "storage_url": final_storage_url,
         "card_id":     card_id,
         "sort_order":  None,
     }
@@ -1938,6 +1954,50 @@ async def upload_player_photo(
     )
 
 
+# ── POST /editor/players/{player_id}/photo/use-existing/{image_id} ───────────
+# Sets the player's photo to point at an image that already exists in the
+# system (any card or set image). No file copy — we just resolve the source
+# image's display URL and write it to players.photo_url. photo_position is
+# reset to NULL because the new image's framing is unlikely to match the old.
+
+@router.post("/players/{player_id}/photo/use-existing/{image_id}", response_class=HTMLResponse)
+async def use_existing_player_photo(request: Request, player_id: int, image_id: int):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    player = _fetch_player(player_id)
+    if not player:
+        return HTMLResponse("<p class='text-danger small'>Player not found.</p>", status_code=404)
+
+    src = query("""
+        SELECT i.image_id, i.filename, i.storage_url, i.set_id,
+               s.og_title
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        WHERE i.image_id = %s
+    """, (image_id,), one=True)
+    if not src:
+        return HTMLResponse("<p class='text-danger small'>Image not found.</p>", status_code=404)
+
+    photo_url = _resolve_display_url(src, src["og_title"])
+    if not photo_url:
+        return HTMLResponse(
+            "<div class='alert alert-danger py-2'>Cannot resolve a usable URL for this image.</div>",
+            status_code=400,
+        )
+
+    execute(
+        "UPDATE players SET photo_url = %s, photo_position = NULL WHERE player_id = %s",
+        (photo_url, player_id),
+    )
+
+    return HTMLResponse(
+        "",
+        headers={"HX-Redirect": f"/editor/players/{player_id}/photo"},
+    )
+
+
 @router.post("/players/{player_id}/photo/remove", response_class=HTMLResponse)
 async def remove_player_photo(request: Request, player_id: int):
     user = require_user(request)
@@ -2297,4 +2357,250 @@ async def images_library(
         "set_id":      set_id,
         "q":           q,
         "no_filter":   False,
+    })
+
+
+# ── GET /editor/sets/{set_id}/cards/{card_id}/images/search ───────────────────
+# Card-scoped image-library search. Same query shape as /editor/images/library
+# but the partial it renders has "Link to this card" buttons that hook into
+# card_images.html's handleLinkClick() staging.
+#
+# `filter_set_id` (not `set_id`) is the dropdown filter — `set_id` and `card_id`
+# in the path identify the destination card the editor is linking *to*.
+
+@router.get("/sets/{set_id}/cards/{card_id}/images/search", response_class=HTMLResponse)
+async def card_image_search(
+    request:        Request,
+    set_id:         int,
+    card_id:        int,
+    q:              str = "",
+    filter_set_id:  int = 0,
+    page:           int = 1,
+):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    # Confirm the destination card exists — gives a clean 404 instead of an
+    # empty results card with a malformed link button.
+    dest = _get_card_with_set(card_id, set_id)
+    if not dest:
+        return HTMLResponse("<p class='text-danger small'>Card not found.</p>", status_code=404)
+
+    use_local = APP_CONFIG.get("use_local_images", False)
+    q = q.strip()
+
+    # Set dropdown — every set that has at least one image.
+    sets = query("""
+        SELECT DISTINCT s.set_id,
+               COALESCE(s.set_name, s.og_title, '(Untitled)') AS set_name,
+               s.publisher, s.year_start
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        ORDER BY s.year_start IS NULL, s.year_start, set_name
+    """)
+
+    # Empty-state prompt before the editor types anything (mirrors Library tab).
+    if not filter_set_id and not q:
+        return templates.TemplateResponse(
+            "editor/partials/card_image_search.html",
+            {
+                "request":       request,
+                "images":        [],
+                "sets":          sets,
+                "total":         0,
+                "page":          1,
+                "total_pages":   1,
+                "filter_set_id": 0,
+                "q":             "",
+                "no_filter":     True,
+                "set_id":        set_id,
+                "card_id":       card_id,
+            }
+        )
+
+    offset       = (page - 1) * IMG_PER_PAGE
+    where_parts: list = []
+    params:      list = []
+
+    # Hide images that are already linked to *this* card so the editor can't
+    # double-link the same row. Other-card and set-level images are still
+    # shown — same image can legitimately apply to multiple cards (team
+    # photos, sticker album spreads, etc.).
+    where_parts.append("NOT (i.set_id = %s AND i.card_id = %s)")
+    params += [set_id, card_id]
+
+    if filter_set_id:
+        where_parts.append("i.set_id = %s")
+        params.append(filter_set_id)
+
+    if q:
+        where_parts.append(
+            "(s.publisher LIKE %s OR s.set_name LIKE %s OR sc.name_in_set LIKE %s)"
+        )
+        like = f"%{q}%"
+        params += [like, like, like]
+
+    where = "WHERE " + " AND ".join(where_parts)
+
+    total = (query(
+        f"""SELECT COUNT(*) AS cnt
+            FROM images i
+            JOIN sets s ON i.set_id = s.set_id
+            LEFT JOIN set_cards sc ON i.card_id = sc.card_id
+            {where}""",
+        tuple(params), one=True,
+    ) or {}).get("cnt", 0)
+
+    images = query(f"""
+        SELECT i.image_id, i.filename, i.storage_url, i.set_id, i.card_id,
+               s.og_title, COALESCE(s.set_name, s.og_title, '(Untitled)') AS set_name,
+               s.publisher, s.year_start,
+               sc.name_in_set, sc.card_number
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        LEFT JOIN set_cards sc ON i.card_id = sc.card_id
+        {where}
+        ORDER BY s.year_start IS NULL, s.year_start, set_name,
+                 i.card_id IS NULL DESC, i.sort_order
+        LIMIT %s OFFSET %s
+    """, tuple(params) + (IMG_PER_PAGE, offset))
+
+    for img in images:
+        img["display_url"] = _fix_img_url(img, use_local)
+
+    total_pages = max(1, (total + IMG_PER_PAGE - 1) // IMG_PER_PAGE)
+
+    return templates.TemplateResponse("editor/partials/card_image_search.html", {
+        "request":       request,
+        "images":        images,
+        "sets":          sets,
+        "total":         total,
+        "page":          page,
+        "total_pages":   total_pages,
+        "filter_set_id": filter_set_id,
+        "q":             q,
+        "no_filter":     False,
+        "set_id":        set_id,
+        "card_id":       card_id,
+    })
+
+
+# ── GET /editor/players/{player_id}/photo/search ──────────────────────────────
+# Player-photo image-library search. Defaults to the sets this player has cards
+# in (filter_set_id = -1 sentinel), so the dropdown lands on the most relevant
+# images on first load. Falls back to "All sets" if the player has no cards.
+#
+# filter_set_id values:
+#    -1  →  player's sets only (default, when the player has any cards)
+#     0  →  all sets
+#    >0  →  single specific set
+
+@router.get("/players/{player_id}/photo/search", response_class=HTMLResponse)
+async def player_photo_search(
+    request:        Request,
+    player_id:      int,
+    q:              str = "",
+    filter_set_id:  int = -1,
+    page:           int = 1,
+):
+    user = require_user(request)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    player = _fetch_player(player_id)
+    if not player:
+        return HTMLResponse("<p class='text-danger small'>Player not found.</p>", status_code=404)
+
+    use_local = APP_CONFIG.get("use_local_images", False)
+    q = q.strip()
+
+    # Sets this player has cards in — drives both the default filter and the
+    # "(player)" markers in the dropdown.
+    player_set_ids = [
+        r["set_id"] for r in query(
+            "SELECT DISTINCT set_id FROM set_cards WHERE player_id = %s",
+            (player_id,),
+        )
+    ]
+
+    # Player has no cards yet → "Player's sets" is meaningless. Fall through
+    # to "All sets" so the editor still sees results.
+    if filter_set_id == -1 and not player_set_ids:
+        filter_set_id = 0
+
+    sets = query("""
+        SELECT DISTINCT s.set_id,
+               COALESCE(s.set_name, s.og_title, '(Untitled)') AS set_name,
+               s.publisher, s.year_start
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        ORDER BY s.year_start IS NULL, s.year_start, set_name
+    """)
+
+    offset       = (page - 1) * IMG_PER_PAGE
+    where_parts: list = []
+    params:      list = []
+
+    if filter_set_id == -1:
+        # Player's sets — use IN (...) over the precomputed list. We've already
+        # ruled out the empty-list case above.
+        placeholders = ",".join(["%s"] * len(player_set_ids))
+        where_parts.append(f"i.set_id IN ({placeholders})")
+        params += player_set_ids
+    elif filter_set_id > 0:
+        where_parts.append("i.set_id = %s")
+        params.append(filter_set_id)
+    # filter_set_id == 0 → all sets, no filter clause
+
+    if q:
+        where_parts.append(
+            "(s.publisher LIKE %s OR s.set_name LIKE %s OR sc.name_in_set LIKE %s)"
+        )
+        like = f"%{q}%"
+        params += [like, like, like]
+
+    where = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    total = (query(
+        f"""SELECT COUNT(*) AS cnt
+            FROM images i
+            JOIN sets s ON i.set_id = s.set_id
+            LEFT JOIN set_cards sc ON i.card_id = sc.card_id
+            {where}""",
+        tuple(params), one=True,
+    ) or {}).get("cnt", 0)
+
+    images = query(f"""
+        SELECT i.image_id, i.filename, i.storage_url, i.set_id, i.card_id,
+               s.og_title, COALESCE(s.set_name, s.og_title, '(Untitled)') AS set_name,
+               s.publisher, s.year_start,
+               sc.name_in_set, sc.card_number
+        FROM images i
+        JOIN sets s ON i.set_id = s.set_id
+        LEFT JOIN set_cards sc ON i.card_id = sc.card_id
+        {where}
+        ORDER BY s.year_start IS NULL, s.year_start, set_name,
+                 i.card_id IS NULL DESC, i.sort_order
+        LIMIT %s OFFSET %s
+    """, tuple(params) + (IMG_PER_PAGE, offset))
+
+    for img in images:
+        img["display_url"] = _fix_img_url(img, use_local)
+
+    total_pages = max(1, (total + IMG_PER_PAGE - 1) // IMG_PER_PAGE)
+
+    return templates.TemplateResponse("editor/partials/player_photo_search.html", {
+        "request":         request,
+        "images":          images,
+        "sets":            sets,
+        "player_set_ids":  player_set_ids,
+        "total":           total,
+        "page":            page,
+        "total_pages":     total_pages,
+        "filter_set_id":   filter_set_id,
+        "q":               q,
+        "no_filter":       False,
+        "player_id":       player_id,
+        "has_existing":    bool(player.get("photo_url")),
     })

@@ -176,6 +176,54 @@
 
 </div><!-- /row -->
 
+<!-- Lightbox (used by Use Existing Image thumbnails) -->
+<div id="lightbox"
+     onclick="lightboxClose()"
+     style="display:none; position:fixed; inset:0; z-index:1000;
+            background:rgba(20,16,10,.92); align-items:center; justify-content:center;">
+  <img id="lightbox-img" src="" alt=""
+       style="max-height:90vh; max-width:90vw; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.6);"
+       onclick="event.stopPropagation()">
+  <span style="position:absolute; top:16px; right:20px; color:rgba(247,244,232,.55);
+               font-size:.85rem; pointer-events:none;">ESC or click outside to close</span>
+</div>
+<script>
+function lightboxOpenUrl(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function lightboxClose() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') lightboxClose(); });
+</script>
+
+<!-- ── Use existing image — search any image in the system as this player's photo ── -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header py-2">
+    <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em;
+                 text-transform:uppercase; color:var(--grey-mid);">
+      <i class="bi bi-search me-1"></i>Use Existing Image
+      <span class="ms-2 fw-normal" style="font-size:.8rem; font-style:italic;">
+        pick any image already in the system to use as this player's photo
+      </span>
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <!-- Loaded via HTMX on first render; subsequent searches replace this innerHTML -->
+    <div id="player-photo-search-results"
+         hx-get="/editor/players/{{ player.player_id }}/photo/search"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="p-4 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+        <i class="bi bi-hourglass-split me-1"></i>Loading image library…
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}

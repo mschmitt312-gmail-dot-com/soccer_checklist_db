@@ -131,8 +131,32 @@
   </div>
 </div>
 
+<!-- Lightbox (used by Image Library Search thumbnails) -->
+<div id="lightbox"
+     onclick="lightboxClose()"
+     style="display:none; position:fixed; inset:0; z-index:1000;
+            background:rgba(20,16,10,.92); align-items:center; justify-content:center;">
+  <img id="lightbox-img" src="" alt=""
+       style="max-height:90vh; max-width:90vw; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,.6);"
+       onclick="event.stopPropagation()">
+  <span style="position:absolute; top:16px; right:20px; color:rgba(247,244,232,.55);
+               font-size:.85rem; pointer-events:none;">ESC or click outside to close</span>
+</div>
+<script>
+function lightboxOpenUrl(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function lightboxClose() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') lightboxClose(); });
+</script>
+
 <!-- ── Set images — link to this card ───────────────────────────────────── -->
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
   <div class="card-header py-2">
     <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em; text-transform:uppercase; color:var(--grey-mid);">
       <i class="bi bi-images me-1"></i>Set Images
@@ -186,6 +210,29 @@
     </div>
     {% endif %}
 
+  </div>
+</div>
+
+<!-- ── Image library search — link any image in the system to this card ── -->
+<div class="card shadow-sm">
+  <div class="card-header py-2">
+    <span style="font-family:'Playfair Display',serif; font-size:.9rem; letter-spacing:.04em; text-transform:uppercase; color:var(--grey-mid);">
+      <i class="bi bi-search me-1"></i>Image Library Search
+      <span class="ms-2 fw-normal" style="font-size:.8rem; font-style:italic;">
+        find any image in the system and stage a link to this card
+      </span>
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <!-- Loaded via HTMX on first render; subsequent searches replace this innerHTML -->
+    <div id="card-image-search-results"
+         hx-get="/editor/sets/{{ the_set.set_id }}/cards/{{ card.card_id }}/images/search"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="p-4 text-center" style="color:var(--grey-mid); font-family:'Crimson Text',serif;">
+        <i class="bi bi-hourglass-split me-1"></i>Loading image library…
+      </div>
+    </div>
   </div>
 </div>
 

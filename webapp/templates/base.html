@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Soccer Card Checklist{% endblock %}</title>
+  <title>{% block title %}Football Card Checklist{% endblock %}</title>
 
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
@@ -34,11 +34,26 @@
 
     /* ── Base typography ──────────────────────────────────────────── */
     body {
-      background-color: var(--parchment);
+      background-color: #1a1815;          /* fallback if SVG doesn't load  */
+      background-image: url('/static/brick-wall.jpg');
+      background-size: cover;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
       color: var(--ink);
       font-family: 'Crimson Text', Georgia, 'Times New Roman', serif;
       font-size: 1.05rem;
       line-height: 1.65;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Content panel sits on parchment over the brick wall ─────── */
+    main.container {
+      background: var(--parchment);
+      box-shadow: 0 0 60px rgba(0,0,0,0.50), 0 0 12px rgba(0,0,0,0.25);
+      padding-top: 1.75rem;
+      padding-bottom: 2rem;
     }
     h1, h2, h3, h4, h5, h6, .navbar-brand {
       font-family: 'Playfair Display', 'Times New Roman', serif;
@@ -258,6 +273,7 @@
 
     /* ── Footer ───────────────────────────────────────────────────── */
     footer {
+      margin-top: auto;                   /* pins footer to bottom without stretching main */
       border-top: 3px double var(--sepia-pale);
       background: var(--cream);
       font-family: 'Crimson Text', serif;
@@ -275,7 +291,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark">
   <div class="container">
     <a class="navbar-brand" href="/">
-      <i class="bi bi-card-checklist me-1"></i>Soccer Card <span>Checklist</span>
+      <i class="bi bi-card-checklist me-1"></i>Football Card <span>Checklist</span>
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
             data-bs-target="#navMenu">
@@ -329,9 +345,9 @@
 </main>
 
 <!-- Footer -->
-<footer class="py-3 mt-4">
+<footer class="py-3">
   <div class="container text-center text-muted small">
-    Soccer Card Checklist &mdash; historical card &amp; sticker database
+    Football Card Checklist &mdash; historical card &amp; sticker database
   </div>
 </footer>
 

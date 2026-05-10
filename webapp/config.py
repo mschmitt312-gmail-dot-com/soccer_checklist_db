@@ -12,9 +12,9 @@ DB_CONFIG = dict(
 )
 
 APP_CONFIG = dict(
-    title="Soccer Card Checklist",
-    description="Browse historical soccer card and sticker sets",
-    items_per_page=24,
+    title="Football Card Checklist",
+    description="Browse historical football card and sticker sets",
+    items_per_page=21,
     # Set True locally to serve images from the soccer_checklists/ folder.
     # Set False (or remove) when deploying to Azure — images will use storage_url instead.
     use_local_images=True,
