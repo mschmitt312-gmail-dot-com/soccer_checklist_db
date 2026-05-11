@@ -5,3 +5,5 @@ __pycache__/
 venv*/
 .env
 config.py
+wikidata_lookup_cache.jsonl
+wikidata_lookup_cache.*.jsonl

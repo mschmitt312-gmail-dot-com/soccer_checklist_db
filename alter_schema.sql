@@ -534,3 +534,85 @@ INSERT INTO countries (country_code, country_name, also_known_as) VALUES
 -- SHOW TRIGGERS LIKE '%set_cards%';        -- confirm triggers updated
 -- SHOW TRIGGERS LIKE '%players%';          -- confirm triggers updated
 -- =============================================================
+
+
+-- =============================================================
+-- WIKIDATA LOOKUP CACHE  (Phase 0 of Wikidata-driven dedup)
+-- =============================================================
+-- Two cache tables that back the wikidata_lookup_players.py script.
+-- They are pure cache — no audit history, no triggers — so the script
+-- can re-run cheaply and the data here is regenerable from Wikidata.
+--
+-- The eventual `players.wikidata_qid` column is intentionally NOT added
+-- here; it lands later in the apply phase so the Phase 1 lookup pass
+-- can run without touching the players audit triggers.
+-- =============================================================
+
+
+-- -------------------------------------------------------------
+-- player_wikidata_candidates -- one row per (player_id, qid)
+-- -------------------------------------------------------------
+-- Stores every Q-ID we ever saw for a given player, with the metadata
+-- we'll need to score them in Phase 2.  Re-running the lookup updates
+-- existing rows in place via the (player_id, qid) unique key.
+
+CREATE TABLE IF NOT EXISTS player_wikidata_candidates (
+    candidate_id     INT AUTO_INCREMENT PRIMARY KEY,
+    player_id        INT          NOT NULL,
+    qid              VARCHAR(20)  NOT NULL,            -- e.g. "Q161501"
+    label_en         VARCHAR(255) NULL,                -- canonical English label
+    description_en   VARCHAR(500) NULL,                -- short description (often "English footballer")
+    given_name       VARCHAR(255) NULL,                -- P735 label (resolved given name, e.g. "Robert" for "Bobby")
+    family_name      VARCHAR(255) NULL,                -- P734 label
+    aliases_json     JSON         NULL,                -- skos:altLabel values across languages
+    date_of_birth    DATE         NULL,                -- P569 (may be partial; year-only stored in birth_year)
+    birth_year       SMALLINT     NULL,                -- convenience copy for fuzzy matching
+    nationality      VARCHAR(100) NULL,                -- P27 label (English)
+    nationality_qid  VARCHAR(20)  NULL,                -- P27 entity Q-ID
+    birth_place      VARCHAR(255) NULL,                -- P19 label
+    clubs_json       JSON         NULL,                -- [{qid,label,start,end}, ...] from P54 statements
+    sparql_strategy  VARCHAR(50)  NULL,                -- which query produced this hit (full_name, initial_only, single_name, ...)
+    similarity_score DECIMAL(4,3) NULL,                -- populated by Phase 2 scoring
+    fetched_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_pwc_player_qid (player_id, qid),
+    KEY idx_pwc_player_id (player_id),
+    KEY idx_pwc_qid       (qid),
+    KEY idx_pwc_score     (similarity_score),
+    CONSTRAINT fk_pwc_player_id
+        FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE
+);
+
+
+-- -------------------------------------------------------------
+-- player_wikidata_lookups -- one row per attempt
+-- -------------------------------------------------------------
+-- Lets the script skip players it has already queried (resumability)
+-- and gives a record of failures (network errors, malformed names, etc.)
+-- for diagnosis.  Multiple rows per player are fine — re-runs append.
+
+CREATE TABLE IF NOT EXISTS player_wikidata_lookups (
+    lookup_id        INT AUTO_INCREMENT PRIMARY KEY,
+    player_id        INT          NOT NULL,
+    strategy         VARCHAR(50)  NOT NULL,            -- 'full_name', 'initial_only', 'single_name', 'last_name_only'
+    candidates_found INT          NOT NULL DEFAULT 0,
+    succeeded        TINYINT(1)   NOT NULL DEFAULT 1,  -- 0 if SPARQL errored after retries
+    error_msg        TEXT         NULL,
+    duration_ms      INT          NULL,                -- wall time for the SPARQL round-trip(s)
+    attempted_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    KEY idx_pwl_player_id    (player_id),
+    KEY idx_pwl_attempted_at (attempted_at),
+    CONSTRAINT fk_pwl_player_id
+        FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE
+);
+
+
+-- =============================================================
+-- VERIFICATION
+-- =============================================================
+-- DESCRIBE player_wikidata_candidates;
+-- DESCRIBE player_wikidata_lookups;
+-- SELECT COUNT(*) FROM player_wikidata_candidates;   -- expect 0 until lookup script runs
+-- SELECT COUNT(*) FROM player_wikidata_lookups;      -- expect 0 until lookup script runs
+-- =============================================================
